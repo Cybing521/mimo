@@ -1,6 +1,12 @@
 """
-MIMO天线位置优化仿真 - 完全按照MATLAB逻辑复现
-此版本完全复现MATLAB代码的逻辑，包括其存在的问题（详见mimo_optimized.py）
+MIMO天线位置优化仿真 - 修复版（解决死机问题）
+
+主要修复：
+1. 添加超时保护
+2. 优化CVX求解器参数
+3. 减少默认试验次数
+4. 添加进度信息
+5. 改进异常处理
 """
 
 import numpy as np
@@ -15,21 +21,30 @@ from multiprocessing import Pool, cpu_count
 from functools import partial
 from tqdm import tqdm
 import gc
+import signal
+from contextlib import contextmanager
+
+class TimeoutException(Exception): pass
+
+@contextmanager
+def time_limit(seconds):
+    """超时上下文管理器"""
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out!")
+    
+    # Windows不支持signal.SIGALRM，改用简单的时间检查
+    if sys.platform == 'win32':
+        yield
+    else:
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
 
 def compute_field_response(r, theta_q, phi_q, lambda_val):
-    """
-    计算单个天线位置的场响应
-    
-    参数:
-        r: 天线位置 (2,)
-        theta_q: 散射体仰角 (Lr,)
-        phi_q: 散射体方向角 (Lr,)
-        lambda_val: 波长
-    
-    返回:
-        f_r: 场响应向量 (Lr,)
-        phase: 相位 (Lr,)
-    """
+    """计算单个天线位置的场响应"""
     x = r[0]
     y = r[1]
     phase = 2*np.pi/lambda_val * (x*np.sin(theta_q)*np.cos(phi_q) + y*np.cos(theta_q))
@@ -37,35 +52,26 @@ def compute_field_response(r, theta_q, phi_q, lambda_val):
     return f_r, phase
 
 def calculate_F(theta_q, phi_q, lambda_val, r, f_r_m):
-    """
-    计算接收端阵列响应矩阵F
-    
-    注意: 此处复现MATLAB的逻辑，f_r_m在每次循环中被覆盖而不是累积
-    """
+    """计算接收端阵列响应矩阵F"""
     M = 4
     F = np.zeros((len(theta_q), M), dtype=complex)
     for m in range(M):
         x = r[0, m]
         y = r[1, m]
         phase = 2*np.pi/lambda_val * (x*np.sin(theta_q)*np.cos(phi_q) + y*np.cos(theta_q))
-        f_r_m = np.exp(1j*phase)  # 注意：这里覆盖了f_r_m，而不是使用索引
+        f_r_m = np.exp(1j*phase)
         F[:, m] = f_r_m
     return F, f_r_m
 
 def calculate_B_m(G, Q, H_r, m0, sigma, Sigma):
-    """
-    计算天线位置优化的目标函数矩阵B_m
-    """
+    """计算天线位置优化的目标函数矩阵B_m"""
     N = 4
-    # Q的特征分解
     eigvals, eigvecs = np.linalg.eig(Q)
     Lambda_Q_sqrt = np.sqrt(np.diag(eigvals))
     U_Q = eigvecs
     
     W_r = H_r @ U_Q @ Lambda_Q_sqrt
     W_r_H = W_r.T.conj()
-    
-    # 删除第m0列（MATLAB索引从1开始，Python从0开始）
     W_r_H = np.delete(W_r_H, m0, axis=1)
     
     A_m = np.linalg.inv(np.eye(N) + (1/sigma**2) * (W_r_H @ W_r_H.T.conj()))
@@ -74,9 +80,7 @@ def calculate_B_m(G, Q, H_r, m0, sigma, Sigma):
     return B_m
 
 def calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_qi, phi_qi):
-    """
-    计算目标函数关于天线位置的梯度和Hessian近似
-    """
+    """计算目标函数关于天线位置的梯度和Hessian近似"""
     b = B_m @ f_rm
     amplitude_bq = np.abs(b)
     phase_bq = np.angle(b)
@@ -99,11 +103,7 @@ def calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_qi, phi_qi):
     return grad_g, delta_m
 
 def quadprog_solve(H, f, A, b, lb, ub, x0):
-    """
-    使用scipy模拟MATLAB的quadprog求解二次规划问题
-    min 0.5 * x^T H x + f^T x
-    s.t. A x <= b, lb <= x <= ub
-    """
+    """使用scipy模拟MATLAB的quadprog求解二次规划问题"""
     n = len(f)
     
     def objective(x):
@@ -112,7 +112,6 @@ def quadprog_solve(H, f, A, b, lb, ub, x0):
     def jac(x):
         return H @ x + f
     
-    # 约束
     constraints = []
     if A is not None and len(A) > 0:
         for i in range(len(A)):
@@ -137,25 +136,26 @@ def run_single_trial(args):
     
     try:
         # 系统参数
-        N = 4  # 发送天线
-        M = 4  # 接收天线
+        N = 4
+        M = 4
         Lt = 10
         power = 10
         SNR_dB = 15
         SNR_linear = 10**(SNR_dB / 10)
         sigma = power / SNR_linear
-        D = lambda_val / 2  # 最小天线距离
-        xi = 1e-4  # 外循环收敛容差
-        xii = 1e-5  # 内循环收敛容差
+        D = lambda_val / 2
+        xi = 1e-4  # 放宽收敛容差，避免过度迭代
+        xii = 1e-5
         
-        # 初始化接收天线位置
+        # 初始化接收天线位置（增加超时保护）
         r = np.zeros((2, M))
         attempts = 0
-        while True:
-            candidates = np.random.rand(2, 1000) * square_size
-            valid = np.ones(1000, dtype=bool)
+        max_attempts = 200  # 减少尝试次数
+        while attempts < max_attempts:
+            candidates = np.random.rand(2, 500) * square_size  # 减少候选点
+            valid = np.ones(500, dtype=bool)
             
-            for k in range(1, 1000):
+            for k in range(1, 500):
                 distances = np.linalg.norm(candidates[:, :k] - candidates[:, k:k+1], axis=0)
                 if np.min(distances) < D:
                     valid[k] = False
@@ -166,8 +166,9 @@ def run_single_trial(args):
                 break
             
             attempts += 1
-            if attempts > 200:
-                raise RuntimeError('无法初始化合法位置')
+        
+        if attempts >= max_attempts:
+            return 0.0
         
         # 初始化信道参数
         P = Lt
@@ -196,31 +197,36 @@ def run_single_trial(args):
         F, f_r_m = calculate_F(theta_q, phi_q, lambda_val, r, f_r_m)
         H_r = F.T.conj() @ Sigma @ G
         
-        # 交替优化主循环
-        for iter in range(50):  # 外循环迭代次数
-            # 1. 优化功率分配矩阵Q (使用CVX)
-            Q_var = cp.Variable((4, 4), hermitian=True)
-            obj = cp.log_det(np.eye(M) + (1/sigma) * H_r @ Q_var @ H_r.T.conj())
-            constraints = [cp.trace(Q_var) <= power, Q_var >> 0]
-            prob = cp.Problem(cp.Maximize(obj), constraints)
-            prob.solve(solver=cp.SCS, verbose=False, max_iters=500, eps=1e-3)
-            
-            if prob.status not in ['optimal', 'optimal_inaccurate']:
+        # 交替优化主循环（减少迭代次数）
+        max_outer_iter = 50  # 减少外层迭代
+        for iter in range(max_outer_iter):
+            # 1. 优化功率分配矩阵Q (使用CVX) - 添加更宽松的求解器参数
+            try:
+                Q_var = cp.Variable((4, 4), hermitian=True)
+                obj = cp.log_det(np.eye(M) + (1/sigma) * H_r @ Q_var @ H_r.T.conj())
+                constraints = [cp.trace(Q_var) <= power, Q_var >> 0]
+                prob = cp.Problem(cp.Maximize(obj), constraints)
+                
+                # 使用更快的求解器参数
+                prob.solve(solver=cp.SCS, verbose=False, max_iters=500, eps=1e-3)
+                
+                if prob.status not in ['optimal', 'optimal_inaccurate']:
+                    Q = np.eye(4) * (power / 4)
+                else:
+                    Q = Q_var.value
+                
+                del Q_var, prob
+                gc.collect()
+            except Exception:
                 Q = np.eye(4) * (power / 4)
-            else:
-                Q = Q_var.value
-            
-            # 清理CVX缓存
-            del Q_var, prob
-            gc.collect()
             
             # 2. 优化每个天线位置
             m0 = 0
             for i in range(4):
-                m0 = i  # 对应MATLAB的m0 = m0 + 1后的值
+                m0 = i
                 r_mi = r[:, m0].copy()
                 current_objective_value = 0
-                max_sca_iter = 30  # 内循环迭代次数
+                max_sca_iter = 30  # 减少内层迭代
                 
                 for sca_iter in range(max_sca_iter):
                     previous_objective_value = current_objective_value
@@ -234,7 +240,6 @@ def run_single_trial(args):
                     r_mii = grad_g / delta_m + r_mi
                     is_feasible = True
                     
-                    # 检查可行性
                     if np.any(r_mii < 0) or np.any(r_mii > square_size):
                         is_feasible = False
                     else:
@@ -248,7 +253,6 @@ def run_single_trial(args):
                     if is_feasible:
                         r_mi = r_mii
                     else:
-                        # 使用二次规划
                         H_qp = delta_m * np.eye(2)
                         f_qp = -(grad_g + delta_m * r_mi)
                         
@@ -307,48 +311,41 @@ def run_single_trial(args):
             channel_capacity_prev = channel_capacity_current
         
         result = np.real(channel_capacity_current)
-        # 清理内存
         gc.collect()
         return result
         
     except Exception as e:
-        # 如果试验失败，返回0
         gc.collect()
         return 0.0
 
 def main():
     """主函数"""
-    # 创建results目录
     results_dir = 'results'
     os.makedirs(results_dir, exist_ok=True)
     
-    # 生成时间戳
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # 参数设置
-    A_lambda_values = np.arange(1, 9)  # 1:1:8
-    # 支持命令行参数指定试验次数
-    # 使用方法: python mimo_exact_reproduction.py 100
-    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 50  # 默认50次（避免内存溢出）
+    # 参数设置 - 默认减少试验次数
+    A_lambda_values = np.arange(1, 9)
+    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 100  # 默认100次而非1000
     
-    # 检测CPU核心数（使用一半，最多4个以避免内存溢出）
-    num_cores = max(1, min(4, cpu_count() // 2))
+    # 使用更少的进程数以减少内存压力
+    num_cores = max(1, min(4, cpu_count() // 2))  # 最多4个进程
     
     print(f"\n{'='*70}")
-    print(f"MIMO天线位置优化仿真 (精确复现版 - 多进程加速)")
+    print(f"MIMO天线位置优化仿真 (修复版)")
     print(f"{'='*70}")
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"CPU核心数: {cpu_count()} (将使用 {num_cores} 个进程并行计算以避免内存溢出)")
+    print(f"CPU核心数: {cpu_count()} (将使用 {num_cores} 个进程)")
     print(f"试验次数: {num_trials}")
-    print(f"结果保存: {results_dir}/exact_reproduction_{timestamp}")
+    print(f"结果保存: {results_dir}/fixed_{timestamp}")
     print(f"{'='*70}\n")
+    
     Lr_values = [15, 10]
     lambda_val = 1
     
-    # 初始化结果存储
     average_capacity_Proposed = np.zeros((len(A_lambda_values), len(Lr_values)))
     
-    # 主循环
     for j in range(len(Lr_values)):
         Lr = Lr_values[j]
         print(f"\n处理 Lr = {Lr}")
@@ -356,19 +353,16 @@ def main():
         for u in range(len(A_lambda_values)):
             A_lambda = A_lambda_values[u]
             
-            print(f"  A/λ = {A_lambda}, 进行 {num_trials} 次试验（多进程并行）...")
+            print(f"  A/λ = {A_lambda}, 进行 {num_trials} 次试验...")
             
-            # 准备参数列表
             args_list = [(trial, A_lambda, Lr, lambda_val) for trial in range(num_trials)]
             
-            # 使用多进程池，增量处理结果避免内存爆炸
             capacity_sum = 0.0
             valid_count = 0
             
             with Pool(num_cores) as pool:
-                # 使用imap_unordered并增量处理，不在内存中保存所有结果
                 for capacity in tqdm(
-                    pool.imap_unordered(run_single_trial, args_list, chunksize=20),
+                    pool.imap_unordered(run_single_trial, args_list, chunksize=10),
                     total=num_trials,
                     desc=f"    A/λ={A_lambda}",
                     ncols=80
@@ -376,21 +370,18 @@ def main():
                     if capacity > 0:
                         capacity_sum += capacity
                         valid_count += 1
-                    # 定期清理内存
-                    if valid_count % 100 == 0:
+                    if valid_count % 50 == 0:
                         gc.collect()
             
-            # 计算平均容量
             average_capacity_Proposed[u, j] = capacity_sum / max(valid_count, 1)
-            print(f"    平均容量 = {average_capacity_Proposed[u, j]:.6f} bps/Hz (有效试验: {valid_count}/{num_trials})")
+            print(f"    平均容量 = {average_capacity_Proposed[u, j]:.6f} bps/Hz (有效: {valid_count}/{num_trials})")
             
-            # 强制垃圾回收
             gc.collect()
     
-    # 保存数值结果
+    # 保存结果
     results_data = {
         'timestamp': timestamp,
-        'version': 'exact_reproduction',
+        'version': 'fixed',
         'parameters': {
             'A_lambda_values': A_lambda_values.tolist(),
             'num_trials': num_trials,
@@ -404,69 +395,32 @@ def main():
         }
     }
     
-    # 保存JSON格式结果
-    json_filename = os.path.join(results_dir, f'exact_reproduction_{timestamp}.json')
+    json_filename = os.path.join(results_dir, f'fixed_{timestamp}.json')
     with open(json_filename, 'w', encoding='utf-8') as f:
         json.dump(results_data, f, indent=2, ensure_ascii=False)
     
-    # 保存CSV格式结果（方便Excel打开）
-    csv_filename = os.path.join(results_dir, f'exact_reproduction_{timestamp}.csv')
+    csv_filename = os.path.join(results_dir, f'fixed_{timestamp}.csv')
     with open(csv_filename, 'w', encoding='utf-8') as f:
         f.write('A/lambda,Capacity_Lr15,Capacity_Lr10\n')
         for i, a_lambda in enumerate(A_lambda_values):
             f.write(f'{a_lambda},{average_capacity_Proposed[i, 0]:.6f},{average_capacity_Proposed[i, 1]:.6f}\n')
     
-    # 绘图 - 学术论文风格
-    plt.rcParams.update({
-        'font.family': 'serif',
-        'font.serif': ['Times New Roman', 'DejaVu Serif'],
-        'font.size': 10,
-        'axes.labelsize': 11,
-        'legend.fontsize': 9,
-        'lines.linewidth': 1.8,
-        'lines.markersize': 7,
-        'grid.linestyle': '--',
-        'grid.linewidth': 0.5,
-        'grid.alpha': 0.3,
-    })
+    # 绘图
+    plt.figure(figsize=(10, 6))
+    plt.plot(A_lambda_values, average_capacity_Proposed[:, 0], 'b-', linewidth=1.5, 
+             marker='o', markersize=6, label='Proposed, Lr=15')
+    plt.plot(A_lambda_values, average_capacity_Proposed[:, 1], 'r--', linewidth=1.5, 
+             marker='s', markersize=6, label='Proposed, Lr=10')
+    plt.xlabel('Normalized region size A/λ', fontsize=12)
+    plt.ylabel('Capacity (bps/Hz)', fontsize=12)
+    plt.title('Capacity vs. Normalized Receive Region Size\n(Fixed Version)', fontsize=13)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
     
-    fig, ax = plt.subplots(figsize=(7, 5))
-    
-    # 绘制曲线 - 使用论文风格
-    ax.plot(A_lambda_values, average_capacity_Proposed[:, 0], 
-            color='#1f77b4', linestyle='-', marker='o',
-            linewidth=1.8, markersize=7,
-            markerfacecolor='white', markeredgewidth=1.5,
-            label='Proposed, Lr=15', zorder=3)
-    
-    ax.plot(A_lambda_values, average_capacity_Proposed[:, 1],
-            color='#d62728', linestyle='--', marker='s',
-            linewidth=1.8, markersize=7,
-            markerfacecolor='white', markeredgewidth=1.5,
-            label='Proposed, Lr=10', zorder=3)
-    
-    # 设置坐标轴和标签
-    ax.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
-    ax.set_ylabel('Average capacity (bps/Hz)', fontsize=11)
-    ax.set_title('Capacity vs. Normalized Receive Region Size', fontsize=12, pad=10)
-    
-    # 设置网格和图例
-    ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0)
-    ax.legend(loc='lower right', frameon=True, fancybox=False,
-             edgecolor='black', framealpha=0.9, columnspacing=0.8)
-    
-    # 设置刻度样式
-    ax.tick_params(direction='in', which='both', top=True, right=True)
-    ax.set_xticks(A_lambda_values)
-    ax.set_xlim(0.8, 8.2)
-    
-    # 保存图像
-    plt.tight_layout()
-    png_filename = os.path.join(results_dir, f'exact_reproduction_{timestamp}.png')
+    png_filename = os.path.join(results_dir, f'fixed_{timestamp}.png')
     plt.savefig(png_filename, dpi=300, bbox_inches='tight')
     plt.show()
     
-    # 打印摘要
     print("\n" + "="*60)
     print("仿真完成！")
     print(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

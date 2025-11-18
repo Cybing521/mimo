@@ -63,6 +63,12 @@ import cvxpy as cp
 from scipy.optimize import minimize, NonlinearConstraint
 import matplotlib.pyplot as plt
 import warnings
+from datetime import datetime
+import json
+import os
+from multiprocessing import Pool, cpu_count
+from functools import partial
+from tqdm import tqdm
 
 def compute_field_response(r, theta_q, phi_q, lambda_val):
     """计算单个天线位置的场响应"""
@@ -256,15 +262,149 @@ def optimize_position_robust(r_mi, r, m0, M, D, square_size, grad_g, delta_m,
         
         return r_mi, False  # 完全失败，保持原位置
 
+def run_single_trial_optimized(args):
+    """运行单次试验（优化版，用于多进程）"""
+    trial, A_lambda, Lr, lambda_val = args
+    
+    square_size = A_lambda * lambda_val
+    
+    try:
+        # 系统参数
+        N, M, Lt = 4, 4, 10
+        power, SNR_dB = 10, 15
+        SNR_linear = 10**(SNR_dB / 10)
+        sigma = power / SNR_linear
+        D = lambda_val / 2
+        xi, xii = 1e-4, 1e-5  # 收敛容差
+        
+        # 智能初始化
+        r = initialize_antennas_smart(M, square_size, D)
+        
+        # 信道参数初始化
+        P = Lt
+        theta_p = np.random.rand(P) * np.pi
+        phi_p = np.random.rand(P) * np.pi
+        
+        G = np.zeros((P, N), dtype=complex)
+        for p in range(P):
+            for n in range(N):
+                G[p, n] = np.exp(1j * np.pi * np.sin(theta_p[p]) * np.cos(phi_p[p]) * n)
+        
+        theta_q = np.random.rand(Lr) * np.pi
+        phi_q = np.random.rand(Lr) * np.pi
+        
+        Sigma = np.zeros((Lr, Lt), dtype=complex)
+        diag_len = min(Lr, Lt)
+        diag_elements = (np.random.randn(diag_len) + 1j*np.random.randn(diag_len)) / np.sqrt(2*Lr)
+        for i in range(diag_len):
+            Sigma[i, i] = diag_elements[i]
+        
+        F = calculate_F(theta_q, phi_q, lambda_val, r)
+        H_r = F.T.conj() @ Sigma @ G
+        
+        channel_capacity_prev = 0
+        
+        # 交替优化
+        for outer_iter in range(50):  # 外循环迭代次数
+            # 1. 优化功率分配
+            Q_var = cp.Variable((N, N), hermitian=True)
+            obj = cp.log_det(np.eye(M) + (1/sigma) * H_r @ Q_var @ H_r.T.conj())
+            constraints = [cp.trace(Q_var) <= power, Q_var >> 0]
+            prob = cp.Problem(cp.Maximize(obj), constraints)
+            
+            try:
+                prob.solve(solver=cp.SCS, verbose=False, max_iters=500, eps=1e-3)
+                if prob.status in ['optimal', 'optimal_inaccurate']:
+                    Q = Q_var.value
+                else:
+                    Q = np.eye(N) * (power / N)
+            except:
+                Q = np.eye(N) * (power / N)
+            
+            # 2. 优化天线位置
+            for antenna_idx in range(M):
+                r_mi = r[:, antenna_idx].copy()
+                prev_obj = 0
+                
+                for sca_iter in range(30):  # 内循环迭代次数
+                    F = calculate_F(theta_q, phi_q, lambda_val, r)
+                    H_r = F.T.conj() @ Sigma @ G
+                    B_m = calculate_B_m(G, Q, H_r, antenna_idx, sigma, Sigma)
+                    
+                    f_rm, _ = compute_field_response(r_mi, theta_q, phi_q, lambda_val)
+                    grad_g, delta_m = calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_q, phi_q)
+                    
+                    # 使用稳健优化
+                    r_new, success = optimize_position_robust(
+                        r_mi, r, antenna_idx, M, D, square_size,
+                        grad_g, delta_m, theta_q, phi_q, lambda_val, B_m
+                    )
+                    
+                    r_mi = r_new
+                    r[:, antenna_idx] = r_mi
+                    
+                    # 计算目标函数值
+                    f_new, _ = compute_field_response(r_mi, theta_q, phi_q, lambda_val)
+                    curr_obj = np.real(f_new.T.conj() @ B_m @ f_new)
+                    
+                    # 相对收敛判据
+                    if abs(curr_obj - prev_obj) < xii * (abs(curr_obj) + 1e-6):
+                        break
+                    
+                    prev_obj = curr_obj
+            
+            # 计算容量
+            F = calculate_F(theta_q, phi_q, lambda_val, r)
+            H_r = F.T.conj() @ Sigma @ G
+            H_rQH = H_r @ Q @ H_r.T.conj()
+            
+            # 添加数值稳定性
+            eigvals = np.linalg.eigvalsh(np.eye(M) + (1/sigma) * H_rQH)
+            eigvals = np.maximum(eigvals, 1e-10)
+            channel_capacity_current = np.sum(np.log2(eigvals))
+            
+            # 相对收敛判据
+            rel_change = abs(channel_capacity_current - channel_capacity_prev) / (abs(channel_capacity_current) + 1e-6)
+            if rel_change < xi:
+                break
+            
+            channel_capacity_prev = channel_capacity_current
+        
+        return np.real(channel_capacity_current), 1  # 返回容量和成功标志
+        
+    except Exception as e:
+        return 0.0, 0  # 返回0容量和失败标志
+
 def main():
     """主函数 - 优化版"""
+    # 创建results目录
+    results_dir = 'results'
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # 生成时间戳
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # 检测CPU核心数
+    num_cores = cpu_count()
+    print(f"\n{'='*70}")
+    print(f"MIMO天线位置优化仿真 (优化版 - 多进程加速)")
+    print(f"{'='*70}")
+    print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"CPU核心数: {num_cores} (将使用 {num_cores} 个进程并行计算)")
+    print(f"结果目录: {results_dir}/")
+    print(f"文件前缀: optimized_{timestamp}")
+    print(f"{'='*70}\n")
+    
     # 参数设置
     A_lambda_values = np.arange(1, 9)
-    num_trials = 1000
+    # 支持命令行参数指定试验次数
+    # 使用方法: python mimo_optimized.py 100
+    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 50  # 默认50次（避免内存溢出）
     Lr_values = [15, 10]
     lambda_val = 1
     
     average_capacity_Proposed = np.zeros((len(A_lambda_values), len(Lr_values)))
+    success_rates = np.zeros((len(A_lambda_values), len(Lr_values)))
     
     for j in range(len(Lr_values)):
         Lr = Lr_values[j]
@@ -272,152 +412,169 @@ def main():
         
         for u in range(len(A_lambda_values)):
             A_lambda = A_lambda_values[u]
-            square_size = A_lambda * lambda_val
-            capacity_trials = np.zeros(num_trials)
             
-            print(f"  A/λ = {A_lambda}, 进行 {num_trials} 次试验...")
+            print(f"  A/λ = {A_lambda}, 进行 {num_trials} 次试验（多进程并行）...")
             
-            success_count = 0
+            # 准备参数列表
+            args_list = [(trial, A_lambda, Lr, lambda_val) for trial in range(num_trials)]
             
-            for trial in range(num_trials):
-                if (trial + 1) % 100 == 0:
-                    print(f"    试验 {trial + 1}/{num_trials}, 成功率: {success_count/(trial+1)*100:.1f}%")
-                
-                try:
-                    # 系统参数
-                    N, M, Lt = 4, 4, 10
-                    power, SNR_dB = 10, 15
-                    SNR_linear = 10**(SNR_dB / 10)
-                    sigma = power / SNR_linear
-                    D = lambda_val / 2
-                    xi, xii = 1e-3, 1e-4
-                    
-                    # 智能初始化
-                    r = initialize_antennas_smart(M, square_size, D)
-                    
-                    # 信道参数初始化
-                    P = Lt
-                    theta_p = np.random.rand(P) * np.pi
-                    phi_p = np.random.rand(P) * np.pi
-                    
-                    G = np.zeros((P, N), dtype=complex)
-                    for p in range(P):
-                        for n in range(N):
-                            G[p, n] = np.exp(1j * np.pi * np.sin(theta_p[p]) * np.cos(phi_p[p]) * n)
-                    
-                    theta_q = np.random.rand(Lr) * np.pi
-                    phi_q = np.random.rand(Lr) * np.pi
-                    
-                    Sigma = np.zeros((Lr, Lt), dtype=complex)
-                    diag_len = min(Lr, Lt)
-                    diag_elements = (np.random.randn(diag_len) + 1j*np.random.randn(diag_len)) / np.sqrt(2*Lr)
-                    for i in range(diag_len):
-                        Sigma[i, i] = diag_elements[i]
-                    
-                    F = calculate_F(theta_q, phi_q, lambda_val, r)
-                    H_r = F.T.conj() @ Sigma @ G
-                    
-                    channel_capacity_prev = 0
-                    
-                    # 交替优化
-                    for outer_iter in range(50):
-                        # 1. 优化功率分配
-                        Q_var = cp.Variable((N, N), hermitian=True)
-                        obj = cp.log_det(np.eye(M) + (1/sigma) * H_r @ Q_var @ H_r.T.conj())
-                        constraints = [cp.trace(Q_var) <= power, Q_var >> 0]
-                        prob = cp.Problem(cp.Maximize(obj), constraints)
-                        
-                        try:
-                            prob.solve(solver=cp.SCS, verbose=False, max_iters=2000)
-                            if prob.status in ['optimal', 'optimal_inaccurate']:
-                                Q = Q_var.value
-                            else:
-                                Q = np.eye(N) * (power / N)
-                        except:
-                            Q = np.eye(N) * (power / N)
-                        
-                        # 2. 优化天线位置
-                        for antenna_idx in range(M):
-                            r_mi = r[:, antenna_idx].copy()
-                            prev_obj = 0
-                            
-                            for sca_iter in range(60):
-                                F = calculate_F(theta_q, phi_q, lambda_val, r)
-                                H_r = F.T.conj() @ Sigma @ G
-                                B_m = calculate_B_m(G, Q, H_r, antenna_idx, sigma, Sigma)
-                                
-                                f_rm, _ = compute_field_response(r_mi, theta_q, phi_q, lambda_val)
-                                grad_g, delta_m = calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_q, phi_q)
-                                
-                                # 使用稳健优化
-                                r_new, success = optimize_position_robust(
-                                    r_mi, r, antenna_idx, M, D, square_size,
-                                    grad_g, delta_m, theta_q, phi_q, lambda_val, B_m
-                                )
-                                
-                                r_mi = r_new
-                                r[:, antenna_idx] = r_mi
-                                
-                                # 计算目标函数值
-                                f_new, _ = compute_field_response(r_mi, theta_q, phi_q, lambda_val)
-                                curr_obj = np.real(f_new.T.conj() @ B_m @ f_new)
-                                
-                                # 相对收敛判据
-                                if abs(curr_obj - prev_obj) < xii * (abs(curr_obj) + 1e-6):
-                                    break
-                                
-                                prev_obj = curr_obj
-                        
-                        # 计算容量
-                        F = calculate_F(theta_q, phi_q, lambda_val, r)
-                        H_r = F.T.conj() @ Sigma @ G
-                        H_rQH = H_r @ Q @ H_r.T.conj()
-                        
-                        # 添加数值稳定性
-                        eigvals = np.linalg.eigvalsh(np.eye(M) + (1/sigma) * H_rQH)
-                        eigvals = np.maximum(eigvals, 1e-10)
-                        channel_capacity_current = np.sum(np.log2(eigvals))
-                        
-                        # 相对收敛判据
-                        rel_change = abs(channel_capacity_current - channel_capacity_prev) / (abs(channel_capacity_current) + 1e-6)
-                        if rel_change < xi:
-                            break
-                        
-                        channel_capacity_prev = channel_capacity_current
-                    
-                    capacity_trials[trial] = np.real(channel_capacity_current)
-                    success_count += 1
-                    
-                except Exception as e:
-                    # print(f"      试验{trial}失败: {str(e)}")
-                    capacity_trials[trial] = 0
+            # 使用多进程池
+            with Pool(num_cores) as pool:
+                # 使用tqdm显示进度条
+                results = list(tqdm(
+                    pool.imap(run_single_trial_optimized, args_list),
+                    total=num_trials,
+                    desc=f"    A/λ={A_lambda}",
+                    ncols=80
+                ))
             
-            average_capacity_Proposed[u, j] = np.mean(capacity_trials[capacity_trials > 0])
-            print(f"    平均容量 = {average_capacity_Proposed[u, j]:.4f} bps/Hz (成功率: {success_count/num_trials*100:.1f}%)")
+            # 分离容量和成功标志
+            capacities = np.array([r[0] for r in results])
+            successes = np.array([r[1] for r in results])
+            
+            # 计算统计量
+            success_count = np.sum(successes)
+            valid_capacities = capacities[capacities > 0]
+            average_capacity_Proposed[u, j] = np.mean(valid_capacities) if len(valid_capacities) > 0 else 0
+            success_rates[u, j] = success_count / num_trials
+            
+            print(f"    平均容量 = {average_capacity_Proposed[u, j]:.6f} bps/Hz (成功率: {success_rates[u, j]*100:.3f}%)")
     
-    # 绘图
-    plt.figure(figsize=(10, 6))
-    plt.plot(A_lambda_values, average_capacity_Proposed[:, 0], 'b-', linewidth=1.5, 
-             marker='o', label='Optimized, Lr=15')
-    plt.plot(A_lambda_values, average_capacity_Proposed[:, 1], 'r--', linewidth=1.5, 
-             marker='s', label='Optimized, Lr=10')
-    plt.xlabel('Normalized region size A/λ', fontsize=12)
-    plt.ylabel('Capacity (bps/Hz)', fontsize=12)
-    plt.title('Capacity vs. Normalized Receive Region Size (Optimized Version)', fontsize=14)
-    plt.legend(fontsize=11)
-    plt.grid(True, alpha=0.3)
-    plt.savefig('capacity_optimized.png', dpi=300, bbox_inches='tight')
+    # 保存详细数值结果
+    results_data = {
+        'timestamp': timestamp,
+        'version': 'optimized',
+        'parameters': {
+            'A_lambda_values': A_lambda_values.tolist(),
+            'num_trials': num_trials,
+            'Lr_values': Lr_values,
+            'lambda_val': lambda_val
+        },
+        'results': {
+            'average_capacity': average_capacity_Proposed.tolist(),
+            'success_rates': success_rates.tolist(),
+            'Lr_15': {
+                'capacity': average_capacity_Proposed[:, 0].tolist(),
+                'success_rate': success_rates[:, 0].tolist()
+            },
+            'Lr_10': {
+                'capacity': average_capacity_Proposed[:, 1].tolist(),
+                'success_rate': success_rates[:, 1].tolist()
+            }
+        },
+        'improvements': [
+            '修复了calculate_F函数中的变量覆盖bug',
+            '改进了天线初始化策略，提高成功率',
+            '添加了步长控制和数值稳定性检查',
+            '使用相对误差作为收敛判据',
+            '改进了约束处理，减少位置突变'
+        ]
+    }
+    
+    # 保存JSON格式
+    json_filename = os.path.join(results_dir, f'optimized_{timestamp}.json')
+    with open(json_filename, 'w', encoding='utf-8') as f:
+        json.dump(results_data, f, indent=2, ensure_ascii=False)
+    
+    # 保存CSV格式（包含成功率）
+    csv_filename = os.path.join(results_dir, f'optimized_{timestamp}.csv')
+    with open(csv_filename, 'w', encoding='utf-8') as f:
+        f.write('A/lambda,Capacity_Lr15,SuccessRate_Lr15,Capacity_Lr10,SuccessRate_Lr10\n')
+        for i, a_lambda in enumerate(A_lambda_values):
+            f.write(f'{a_lambda},{average_capacity_Proposed[i, 0]:.6f},{success_rates[i, 0]:.4f},'
+                   f'{average_capacity_Proposed[i, 1]:.6f},{success_rates[i, 1]:.4f}\n')
+    
+    # 绘图 - 学术论文风格双子图
+    plt.rcParams.update({
+        'font.family': 'serif',
+        'font.serif': ['Times New Roman', 'DejaVu Serif'],
+        'font.size': 10,
+        'axes.labelsize': 11,
+        'legend.fontsize': 9,
+        'lines.linewidth': 1.8,
+        'lines.markersize': 7,
+        'grid.linestyle': '--',
+        'grid.linewidth': 0.5,
+        'grid.alpha': 0.3,
+    })
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # (a) 容量对比图
+    ax1.plot(A_lambda_values, average_capacity_Proposed[:, 0], 
+            color='#1f77b4', linestyle='-', marker='o',
+            linewidth=1.8, markersize=7,
+            markerfacecolor='white', markeredgewidth=1.5,
+            label='Optimized, Lr=15', zorder=3)
+    
+    ax1.plot(A_lambda_values, average_capacity_Proposed[:, 1],
+            color='#d62728', linestyle='--', marker='s',
+            linewidth=1.8, markersize=7,
+            markerfacecolor='white', markeredgewidth=1.5,
+            label='Optimized, Lr=10', zorder=3)
+    
+    ax1.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
+    ax1.set_ylabel('Average capacity (bps/Hz)', fontsize=11)
+    ax1.set_title('(a) Capacity Performance', fontsize=12, loc='left', pad=10)
+    ax1.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0)
+    ax1.legend(loc='lower right', frameon=True, fancybox=False,
+              edgecolor='black', framealpha=0.9)
+    ax1.tick_params(direction='in', which='both', top=True, right=True)
+    ax1.set_xticks(A_lambda_values)
+    ax1.set_xlim(0.8, 8.2)
+    
+    # (b) 成功率图
+    ax2.plot(A_lambda_values, success_rates[:, 0]*100,
+            color='#1f77b4', linestyle='-', marker='o',
+            linewidth=1.8, markersize=7,
+            markerfacecolor='white', markeredgewidth=1.5,
+            label='Optimized, Lr=15', zorder=3)
+    
+    ax2.plot(A_lambda_values, success_rates[:, 1]*100,
+            color='#d62728', linestyle='--', marker='s',
+            linewidth=1.8, markersize=7,
+            markerfacecolor='white', markeredgewidth=1.5,
+            label='Optimized, Lr=10', zorder=3)
+    
+    ax2.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
+    ax2.set_ylabel('Success rate (%)', fontsize=11)
+    ax2.set_title('(b) Optimization Success Rate', fontsize=12, loc='left', pad=10)
+    ax2.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0)
+    ax2.legend(loc='lower right', frameon=True, fancybox=False,
+              edgecolor='black', framealpha=0.9)
+    ax2.tick_params(direction='in', which='both', top=True, right=True)
+    ax2.set_xticks(A_lambda_values)
+    ax2.set_xlim(0.8, 8.2)
+    ax2.set_ylim(0, 105)
+    
+    plt.tight_layout()
+    png_filename = os.path.join(results_dir, f'optimized_{timestamp}.png')
+    plt.savefig(png_filename, dpi=300, bbox_inches='tight')
     plt.show()
     
-    print("\n优化完成！结果已保存到 capacity_optimized.png")
-    print("\n主要改进:")
-    print("1. 修复了calculate_F函数中的变量覆盖bug")
-    print("2. 改进了天线初始化策略，提高成功率")
-    print("3. 添加了步长控制和数值稳定性检查")
-    print("4. 使用相对误差作为收敛判据")
-    print("5. 改进了约束处理，减少位置突变")
+    # 打印详细报告
+    print(f"\n{'='*70}")
+    print("优化仿真完成！")
+    print(f"{'='*70}")
+    print(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\n结果文件:")
+    print(f"  - 图像: {png_filename}")
+    print(f"  - JSON: {json_filename}")
+    print(f"  - CSV:  {csv_filename}")
     
-    return average_capacity_Proposed
+    print(f"\n容量结果摘要:")
+    print(f"  Lr=15: 平均={np.mean(average_capacity_Proposed[:, 0]):.6f} bps/Hz, "
+          f"成功率={np.mean(success_rates[:, 0])*100:.3f}%")
+    print(f"  Lr=10: 平均={np.mean(average_capacity_Proposed[:, 1]):.6f} bps/Hz, "
+          f"成功率={np.mean(success_rates[:, 1])*100:.3f}%")
+    
+    print(f"\n主要改进:")
+    for i, improvement in enumerate(results_data['improvements'], 1):
+        print(f"  {i}. {improvement}")
+    
+    print(f"\n{'='*70}")
+    
+    return average_capacity_Proposed, success_rates
 
 if __name__ == "__main__":
     results = main()
