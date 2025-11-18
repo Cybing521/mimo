@@ -66,9 +66,13 @@ import warnings
 from datetime import datetime
 import json
 import os
+import sys
 from multiprocessing import Pool, cpu_count
 from functools import partial
 from tqdm import tqdm
+
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning)
 
 def compute_field_response(r, theta_q, phi_q, lambda_val):
     """计算单个天线位置的场响应"""
@@ -269,13 +273,13 @@ def run_single_trial_optimized(args):
     square_size = A_lambda * lambda_val
     
     try:
-        # 系统参数
-        N, M, Lt = 4, 4, 10
-        power, SNR_dB = 10, 15
+        # 系统参数（根据论文图4）
+        N, M, Lt = 4, 4, 5  # Lt = 5
+        power, SNR_dB = 10, 5  # SNR = 5 dB（图4设置）
         SNR_linear = 10**(SNR_dB / 10)
         sigma = power / SNR_linear
         D = lambda_val / 2
-        xi, xii = 1e-4, 1e-5  # 收敛容差
+        xi, xii = 1e-3, 1e-3  # 收敛容差 ε₁ = ε₂ = 10^-3
         
         # 智能初始化
         r = initialize_antennas_smart(M, square_size, D)
@@ -293,11 +297,14 @@ def run_single_trial_optimized(args):
         theta_q = np.random.rand(Lr) * np.pi
         phi_q = np.random.rand(Lr) * np.pi
         
+        # 路径响应矩阵Σ（Rician信道，κ=1）
         Sigma = np.zeros((Lr, Lt), dtype=complex)
-        diag_len = min(Lr, Lt)
-        diag_elements = (np.random.randn(diag_len) + 1j*np.random.randn(diag_len)) / np.sqrt(2*Lr)
-        for i in range(diag_len):
-            Sigma[i, i] = diag_elements[i]
+        kappa = 1  # LoS与NLoS功率比
+        # Σ[1,1] ~ CN(0, κ/(κ+1))
+        Sigma[0, 0] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(kappa / (kappa + 1) / 2)
+        # Σ[p,p] ~ CN(0, 1/((κ+1)(Lr-1))) for p=2,3,...,Lr
+        for i in range(1, min(Lr, Lt)):
+            Sigma[i, i] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(1 / ((kappa + 1) * (Lr - 1)) / 2)
         
         F = calculate_F(theta_q, phi_q, lambda_val, r)
         H_r = F.T.conj() @ Sigma @ G
@@ -370,10 +377,16 @@ def run_single_trial_optimized(args):
             
             channel_capacity_prev = channel_capacity_current
         
-        return np.real(channel_capacity_current), 1  # 返回容量和成功标志
+        # 计算三个性能指标（对应论文Fig. 6）
+        achievable_rate = np.real(channel_capacity_current)
+        channel_total_power = np.real(np.trace(H_rQH))
+        singular_values = np.linalg.svd(H_r, compute_uv=False)
+        condition_number = singular_values[0] / (singular_values[-1] + 1e-10)
+        
+        return achievable_rate, channel_total_power, condition_number, 1  # 返回三个指标和成功标志
         
     except Exception as e:
-        return 0.0, 0  # 返回0容量和失败标志
+        return 0.0, 0.0, 0.0, 0  # 返回零值和失败标志
 
 def main():
     """主函数 - 优化版"""
@@ -384,26 +397,36 @@ def main():
     # 生成时间戳
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # 检测CPU核心数
-    num_cores = cpu_count()
+    # 检测CPU核心数 - 使用一半核心数以降低内存压力
+    max_cores = cpu_count()
+    # 限制最多使用4个进程或一半核心数，以较小者为准
+    num_cores = min(8, max(1, max_cores // 2))
     print(f"\n{'='*70}")
-    print(f"MIMO天线位置优化仿真 (优化版 - 多进程加速)")
+    print(f"MIMO天线位置优化仿真 (优化版 - 多进程加速 - 内存优化)")
     print(f"{'='*70}")
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"CPU核心数: {num_cores} (将使用 {num_cores} 个进程并行计算)")
+    print(f"CPU核心数: {max_cores} (将使用 {num_cores} 个进程以节省内存)")
+    print(f"内存优化: 限制并发进程数以避免内存耗尽")
     print(f"结果目录: {results_dir}/")
     print(f"文件前缀: optimized_{timestamp}")
     print(f"{'='*70}\n")
     
-    # 参数设置
-    A_lambda_values = np.arange(1, 9)
-    # 支持命令行参数指定试验次数
-    # 使用方法: python mimo_optimized.py 100
-    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 50  # 默认50次（避免内存溢出）
-    Lr_values = [15, 10]
+    # 参数设置（根据论文实验描述）
+    A_lambda_values = np.arange(1, 4.5, 0.3)  # [1, 1.5, 2, 2.5, 3, 3.5, 4]
+    # 支持命令行参数指定试验次数和进程数
+    # 使用方法: python mimo_optimized.py [num_trials] [num_processes]
+    # 例如: python mimo_optimized.py 100 2  (100次试验，2个进程)
+    # 论文使用4×10⁴次，这里默认100次作为合理折中
+    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 100  # 默认100次
+    if len(sys.argv) > 2:
+        num_cores = min(int(sys.argv[2]), max_cores)
+        print(f"使用命令行指定的进程数: {num_cores}")
+    Lr_values = [5]  # Lt = Lr = 5（论文设置）
     lambda_val = 1
     
-    average_capacity_Proposed = np.zeros((len(A_lambda_values), len(Lr_values)))
+    average_capacity = np.zeros((len(A_lambda_values), len(Lr_values)))
+    average_total_power = np.zeros((len(A_lambda_values), len(Lr_values)))
+    average_condition_number = np.zeros((len(A_lambda_values), len(Lr_values)))
     success_rates = np.zeros((len(A_lambda_values), len(Lr_values)))
     
     for j in range(len(Lr_values)):
@@ -418,9 +441,11 @@ def main():
             # 准备参数列表
             args_list = [(trial, A_lambda, Lr, lambda_val) for trial in range(num_trials)]
             
-            # 使用多进程池
-            with Pool(num_cores) as pool:
+            # 使用多进程池（带内存管理）
+            # 使用maxtasksperchild限制每个子进程处理的任务数，防止内存泄漏
+            with Pool(processes=num_cores, maxtasksperchild=10) as pool:
                 # 使用tqdm显示进度条
+                # 使用imap而不是map以便逐步处理，降低内存峰值
                 results = list(tqdm(
                     pool.imap(run_single_trial_optimized, args_list),
                     total=num_trials,
@@ -428,17 +453,21 @@ def main():
                     ncols=80
                 ))
             
-            # 分离容量和成功标志
+            # 分离四个返回值
             capacities = np.array([r[0] for r in results])
-            successes = np.array([r[1] for r in results])
+            powers = np.array([r[1] for r in results])
+            conditions = np.array([r[2] for r in results])
+            successes = np.array([r[3] for r in results])
             
             # 计算统计量
             success_count = np.sum(successes)
-            valid_capacities = capacities[capacities > 0]
-            average_capacity_Proposed[u, j] = np.mean(valid_capacities) if len(valid_capacities) > 0 else 0
+            valid_mask = capacities > 0
+            average_capacity[u, j] = np.mean(capacities[valid_mask]) if np.any(valid_mask) else 0
+            average_total_power[u, j] = np.mean(powers[valid_mask]) if np.any(valid_mask) else 0
+            average_condition_number[u, j] = np.mean(conditions[valid_mask]) if np.any(valid_mask) else 0
             success_rates[u, j] = success_count / num_trials
             
-            print(f"    平均容量 = {average_capacity_Proposed[u, j]:.6f} bps/Hz (成功率: {success_rates[u, j]*100:.3f}%)")
+            print(f"    平均容量 = {average_capacity[u, j]:.6f} bps/Hz (成功率: {success_rates[u, j]*100:.3f}%)")
     
     # 保存详细数值结果
     results_data = {
@@ -451,15 +480,17 @@ def main():
             'lambda_val': lambda_val
         },
         'results': {
-            'average_capacity': average_capacity_Proposed.tolist(),
-            'success_rates': success_rates.tolist(),
-            'Lr_15': {
-                'capacity': average_capacity_Proposed[:, 0].tolist(),
-                'success_rate': success_rates[:, 0].tolist()
+            'achievable_rate': {
+                'Lr_5': average_capacity[:, 0].tolist()
             },
-            'Lr_10': {
-                'capacity': average_capacity_Proposed[:, 1].tolist(),
-                'success_rate': success_rates[:, 1].tolist()
+            'channel_total_power': {
+                'Lr_5': average_total_power[:, 0].tolist()
+            },
+            'condition_number': {
+                'Lr_5': average_condition_number[:, 0].tolist()
+            },
+            'success_rates': {
+                'Lr_5': success_rates[:, 0].tolist()
             }
         },
         'improvements': [
@@ -476,13 +507,13 @@ def main():
     with open(json_filename, 'w', encoding='utf-8') as f:
         json.dump(results_data, f, indent=2, ensure_ascii=False)
     
-    # 保存CSV格式（包含成功率）
+    # 保存CSV格式（包含三个指标和成功率）
     csv_filename = os.path.join(results_dir, f'optimized_{timestamp}.csv')
     with open(csv_filename, 'w', encoding='utf-8') as f:
-        f.write('A/lambda,Capacity_Lr15,SuccessRate_Lr15,Capacity_Lr10,SuccessRate_Lr10\n')
+        f.write('A/lambda,Rate_Lr5,Power_Lr5,Cond_Lr5,SR_Lr5\n')
         for i, a_lambda in enumerate(A_lambda_values):
-            f.write(f'{a_lambda},{average_capacity_Proposed[i, 0]:.6f},{success_rates[i, 0]:.4f},'
-                   f'{average_capacity_Proposed[i, 1]:.6f},{success_rates[i, 1]:.4f}\n')
+            f.write(f'{a_lambda},'
+                   f'{average_capacity[i, 0]:.6f},{average_total_power[i, 0]:.6f},{average_condition_number[i, 0]:.2f},{success_rates[i, 0]:.4f}\n')
     
     # 绘图 - 学术论文风格双子图
     plt.rcParams.update({
@@ -498,54 +529,53 @@ def main():
         'grid.alpha': 0.3,
     })
     
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    # 创建三子图（对应论文Fig. 4）
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(7, 12))
     
-    # (a) 容量对比图
-    ax1.plot(A_lambda_values, average_capacity_Proposed[:, 0], 
+    # (a) Achievable rate
+    ax1.plot(A_lambda_values, average_capacity[:, 0], 
             color='#1f77b4', linestyle='-', marker='o',
             linewidth=1.8, markersize=7,
             markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=15', zorder=3)
-    
-    ax1.plot(A_lambda_values, average_capacity_Proposed[:, 1],
-            color='#d62728', linestyle='--', marker='s',
-            linewidth=1.8, markersize=7,
-            markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=10', zorder=3)
-    
+            label='Optimized, Lr=5', zorder=3)
     ax1.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
-    ax1.set_ylabel('Average capacity (bps/Hz)', fontsize=11)
-    ax1.set_title('(a) Capacity Performance', fontsize=12, loc='left', pad=10)
+    ax1.set_ylabel('Achievable rate (bps/Hz)', fontsize=11)
+    ax1.set_title('(a) Achievable rate versus normalized region size', fontsize=12, loc='left', pad=10)
     ax1.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0)
     ax1.legend(loc='lower right', frameon=True, fancybox=False,
               edgecolor='black', framealpha=0.9)
     ax1.tick_params(direction='in', which='both', top=True, right=True)
-    ax1.set_xticks(A_lambda_values)
-    ax1.set_xlim(0.8, 8.2)
+    ax1.set_xlim(0.9, 4.1)
     
-    # (b) 成功率图
-    ax2.plot(A_lambda_values, success_rates[:, 0]*100,
+    # (b) Channel total power
+    ax2.plot(A_lambda_values, average_total_power[:, 0],
             color='#1f77b4', linestyle='-', marker='o',
             linewidth=1.8, markersize=7,
             markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=15', zorder=3)
-    
-    ax2.plot(A_lambda_values, success_rates[:, 1]*100,
-            color='#d62728', linestyle='--', marker='s',
-            linewidth=1.8, markersize=7,
-            markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=10', zorder=3)
-    
+            label='Optimized, Lr=5', zorder=3)
     ax2.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
-    ax2.set_ylabel('Success rate (%)', fontsize=11)
-    ax2.set_title('(b) Optimization Success Rate', fontsize=12, loc='left', pad=10)
+    ax2.set_ylabel('Channel total power', fontsize=11)
+    ax2.set_title('(b) Channel total power versus normalized region size', fontsize=12, loc='left', pad=10)
     ax2.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0)
     ax2.legend(loc='lower right', frameon=True, fancybox=False,
               edgecolor='black', framealpha=0.9)
     ax2.tick_params(direction='in', which='both', top=True, right=True)
-    ax2.set_xticks(A_lambda_values)
-    ax2.set_xlim(0.8, 8.2)
-    ax2.set_ylim(0, 105)
+    ax2.set_xlim(0.9, 4.1)
+    
+    # (c) Channel condition number (对数刻度)
+    ax3.semilogy(A_lambda_values, average_condition_number[:, 0],
+                color='#1f77b4', linestyle='-', marker='o',
+                linewidth=1.8, markersize=7,
+                markerfacecolor='white', markeredgewidth=1.5,
+                label='Optimized, Lr=5', zorder=3)
+    ax3.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
+    ax3.set_ylabel('Condition number', fontsize=11)
+    ax3.set_title('(c) Channel condition number versus normalized region size', fontsize=12, loc='left', pad=10)
+    ax3.grid(True, linestyle='--', linewidth=0.5, alpha=0.3, zorder=0, which='both')
+    ax3.legend(loc='upper right', frameon=True, fancybox=False,
+              edgecolor='black', framealpha=0.9)
+    ax3.tick_params(direction='in', which='both', top=True, right=True)
+    ax3.set_xlim(0.9, 4.1)
     
     plt.tight_layout()
     png_filename = os.path.join(results_dir, f'optimized_{timestamp}.png')
@@ -562,11 +592,11 @@ def main():
     print(f"  - JSON: {json_filename}")
     print(f"  - CSV:  {csv_filename}")
     
-    print(f"\n容量结果摘要:")
-    print(f"  Lr=15: 平均={np.mean(average_capacity_Proposed[:, 0]):.6f} bps/Hz, "
-          f"成功率={np.mean(success_rates[:, 0])*100:.3f}%")
-    print(f"  Lr=10: 平均={np.mean(average_capacity_Proposed[:, 1]):.6f} bps/Hz, "
-          f"成功率={np.mean(success_rates[:, 1])*100:.3f}%")
+    print(f"\n性能指标摘要:")
+    print(f"  Lr=5 (SNR=5dB): 容量={np.mean(average_capacity[:, 0]):.6f} bps/Hz, "
+          f"功率={np.mean(average_total_power[:, 0]):.2f}, "
+          f"条件数={np.mean(average_condition_number[:, 0]):.2f}, "
+          f"成功率={np.mean(success_rates[:, 0])*100:.1f}%")
     
     print(f"\n主要改进:")
     for i, improvement in enumerate(results_data['improvements'], 1):
@@ -574,7 +604,7 @@ def main():
     
     print(f"\n{'='*70}")
     
-    return average_capacity_Proposed, success_rates
+    return average_capacity, average_total_power, average_condition_number, success_rates
 
 if __name__ == "__main__":
     results = main()
