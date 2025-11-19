@@ -33,8 +33,17 @@ Before proposing or writing any new simulation scripts based on a research paper
     *   Use academic plotting styles (serif fonts, clear legends, grid lines).
     *   Label axes clearly with units.
 
-## 3. Context Awareness
+## 3. Project Structure & Maintenance Rules
+
+*   **Documentation First**:
+    *   **Update README.md** IMMEDIATELY after any code modification, feature addition, or script change.
+    *   Ensure README reflects the current CLI usage, parameters, and file structure.
+*   **Directory Structure**:
+    *   **Utility Scripts**: All auxiliary tools (e.g., PDF extractors, data converters) MUST be placed in the `utils/` package.
+    *   **Results**: All simulation outputs (images, data) MUST go to `results/`.
+    *   **Papers**: Keep all reference PDFs in `papers/`.
+
+## 4. Context Awareness
 
 *   Always check existing files (`.py`, `README.md`) to see what has already been implemented.
 *   If an existing script (e.g., `mimo_comparison.py`) mentions specific Figures (e.g., "Fig. 6"), use it as a reference for parameter tuning.
-

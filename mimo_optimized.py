@@ -314,10 +314,32 @@ class MIMOSystem:
             if abs(cap_curr - cap_prev) < self.xi * (abs(cap_curr)+1e-6): break
             cap_prev = cap_curr
             
-        # 最终容量
+        # 最终结果计算
         F = self.calculate_F(theta_q, phi_q, r)
         G = self.calculate_G(theta_p, phi_p, t)
         H_r = F.T.conj() @ Sigma @ G
+        
+        # 1. Achievable Rate (Capacity)
         H_rQH = H_r @ Q @ H_r.T.conj()
-        eigvals = np.linalg.eigvalsh(np.eye(self.M) + (1/self.sigma) * H_rQH)
-        return np.sum(np.log2(np.maximum(eigvals, 1e-10)))
+        eigvals_cap = np.linalg.eigvalsh(np.eye(self.M) + (1/self.sigma) * H_rQH)
+        capacity = np.sum(np.log2(np.maximum(eigvals_cap, 1e-10)))
+        
+        # 2. Strongest Eigenchannel Power (max(lambda))
+        # 对 H_r * H_r^H 进行特征值分解，找出最大特征值
+        H_HH = H_r @ H_r.T.conj()
+        eigvals_power = np.linalg.eigvalsh(H_HH)
+        strongest_eigen_power = np.max(eigvals_power)
+        
+        # 3. Channel Total Power (frobenius norm squared or sum of eigenvalues)
+        total_power = np.sum(eigvals_power) # trace(H H^H) = ||H||_F^2
+        
+        # 4. Condition Number (lambda_max / lambda_min)
+        min_eig = np.min(eigvals_power)
+        cond_number = strongest_eigen_power / (min_eig + 1e-10)
+        
+        return {
+            'capacity': capacity,
+            'strongest_eigen_power': strongest_eigen_power,
+            'total_power': total_power,
+            'cond_number': cond_number
+        }
