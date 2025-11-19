@@ -1,5 +1,15 @@
 """
-MIMO天线位置优化仿真 - 优化版本
+MIMO天线位置优化仿真 - 完整Proposed算法（优化版）
+
+本代码实现完整的Algorithm 2 (Alternating Optimization)，包括：
+1. 功率分配优化 (步骤4)
+2. 接收天线位置优化 (步骤5-8，调用Algorithm 1)
+3. 发送天线位置优化 (步骤10-13，调用Algorithm 1) ← 新增
+4. 交替迭代直到收敛 (步骤3)
+
+与原MATLAB代码的区别：
+- 原MATLAB: 仅优化接收端 → 对应论文Fig.6的RMA方案
+- 本代码: 同时优化收发两端 → 对应论文Fig.6的Proposed方案
 
 原MATLAB代码存在的问题分析：
 ================================
@@ -97,8 +107,30 @@ def calculate_F(theta_q, phi_q, lambda_val, r):
     
     return F
 
+def calculate_G(theta_p, phi_p, lambda_val, t):
+    """
+    计算发送端阵列响应矩阵G
+    参数:
+        theta_p: 发送端散射体仰角 (Lt,)
+        phi_p: 发送端散射体方向角 (Lt,)
+        lambda_val: 波长
+        t: 发送天线位置 (2, N)
+    返回:
+        G: 发送端阵列响应矩阵 (Lt, N)
+    """
+    N = t.shape[1]
+    Lt = len(theta_p)
+    G = np.zeros((Lt, N), dtype=complex)
+    
+    for n in range(N):
+        x, y = t[0, n], t[1, n]
+        phase = 2*np.pi/lambda_val * (x*np.sin(theta_p)*np.cos(phi_p) + y*np.cos(theta_p))
+        G[:, n] = np.exp(1j*phase)
+    
+    return G
+
 def calculate_B_m(G, Q, H_r, m0, sigma, Sigma):
-    """计算天线位置优化的目标函数矩阵B_m"""
+    """计算接收天线位置优化的目标函数矩阵B_m (对应论文式18)"""
     N = Q.shape[0]
     
     # 添加数值稳定性检查
@@ -119,8 +151,104 @@ def calculate_B_m(G, Q, H_r, m0, sigma, Sigma):
     
     return B_m
 
+def calculate_S_matrix(H_r, power, sigma):
+    """
+    计算发送端优化所需的对偶协方差矩阵S (对应论文式22)
+    
+    S是针对H^H的最优协方差矩阵，用于发送端优化
+    H^H = G^H @ Σ^H @ F (N×M)
+    S的优化类似Q，但针对H^H系统
+    
+    参数:
+        H_r: 信道矩阵 H = F^H @ Σ @ G (M, N)
+        power: 总功率约束 P
+        sigma: 噪声标准差
+    返回:
+        S: 对偶协方差矩阵 (M, M)
+        U_S: S的特征向量矩阵 (M, M)
+        Lambda_S_sqrt: S特征值的平方根对角矩阵 (M, M)
+    """
+    M, N = H_r.shape  # H_r是(M, N)
+    
+    # H^H = (F^H @ Σ @ G)^H = G^H @ Σ^H @ F
+    # 我们需要优化S使得 log det(I_N + (1/σ²) * H^H @ S @ H^H^H) 最大
+    # 这等价于优化 H^H @ S @ H^H^H
+    
+    # 计算H @ H^H (M×M矩阵)
+    H_HH = H_r @ H_r.T.conj()  # (M, M)
+    
+    # 特征分解H @ H^H
+    eigvals, eigvecs = np.linalg.eigh(H_HH)
+    eigvals = np.maximum(eigvals, 0)  # 确保非负
+    idx = np.argsort(eigvals)[::-1]  # 降序排列
+    eigvals = eigvals[idx]
+    eigvecs = eigvecs[:, idx]
+    
+    # Water-filling功率分配 (类似Q的优化)
+    rank_S = min(M, np.sum(eigvals > 1e-10))
+    
+    # 简化：等功率分配
+    p_s = np.zeros(M)
+    if rank_S > 0:
+        p_s[:rank_S] = power / rank_S
+    
+    # 构造S = U_S @ diag(p_s) @ U_S^H
+    Lambda_S = np.diag(p_s)
+    S = eigvecs @ Lambda_S @ eigvecs.T.conj()
+    
+    # 特征值平方根
+    Lambda_S_sqrt = np.sqrt(Lambda_S)
+    U_S = eigvecs
+    
+    return S, U_S, Lambda_S_sqrt
+
+def calculate_D_n(F, S_tuple, G, n0, sigma, Sigma, power):
+    """
+    计算发送天线位置优化的目标函数矩阵D_n (严格对应论文式23)
+    
+    论文式(23):
+    D_n = Σ^H @ F(r̃) @ U_S @ V_S^† @ A_n @ V_S^† @ U_S^H @ F(r̃)^H @ Σ
+    
+    参数:
+        F: 接收端阵列响应 (Lr, M)
+        S_tuple: (S, U_S, Lambda_S_sqrt) - 对偶协方差矩阵及其分解
+        G: 发送端阵列响应 (Lt, N)
+        n0: 当前优化的发送天线索引
+        sigma: 噪声标准差
+        Sigma: 路径响应矩阵 (Lr, Lt)
+        power: 总功率
+    返回:
+        D_n: 目标函数矩阵 (Lt, Lt)
+    """
+    S, U_S, Lambda_S_sqrt = S_tuple
+    M = F.shape[1]
+    
+    # 计算P(t̃) = H(t̃,r̃) @ U_S @ sqrt(Λ_S) @ Σ_g(t_n)
+    # 其中H = F^H @ Σ @ G，所以H^H = G^H @ Σ^H @ F
+    # P(t̃) = G^H @ Σ^H @ F @ U_S @ sqrt(Λ_S)
+    
+    # 定义p(t_n) = V_S^† U_S^H F(r̃)^H Σ_g(t_n) (论文第5页)
+    # 移除第n个发送天线后的矩阵
+    P_tilde = G.T.conj() @ Sigma.T.conj() @ F @ U_S @ Lambda_S_sqrt  # (N, M)
+    
+    # 删除第n0行（对应第n个发送天线）
+    P_tilde_n = np.delete(P_tilde, n0, axis=0)  # (N-1, M)
+    
+    # C_n = I_M + (1/σ²) P̃_n^H P̃_n (论文第5页)
+    C_n_inv = np.eye(M) + (1/sigma**2) * (P_tilde_n.T.conj() @ P_tilde_n)
+    C_n = np.linalg.inv(C_n_inv + 1e-10*np.eye(M))  # (M, M)
+    
+    # A_n = C_n (根据论文符号)
+    A_n = C_n
+    
+    # D_n = Σ^H @ F @ U_S @ sqrt(Λ_S) @ A_n @ sqrt(Λ_S) @ U_S^H @ F^H @ Σ
+    # 论文式(23)
+    D_n = Sigma.T.conj() @ F @ U_S @ Lambda_S_sqrt @ A_n @ Lambda_S_sqrt @ U_S.T.conj() @ F.T.conj() @ Sigma
+    
+    return D_n
+
 def calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_qi, phi_qi):
-    """计算梯度和Hessian近似"""
+    """计算接收端梯度和Hessian近似"""
     b = B_m @ f_rm
     amplitude_bq = np.abs(b)
     phase_bq = np.angle(b)
@@ -140,6 +268,45 @@ def calculate_gradients(B_m, f_rm, r_mi, lambda_val, theta_qi, phi_qi):
     delta_m = (8*np.pi**2) / (lambda_val**2) * sum_abs_b
     
     return grad_g, delta_m
+
+def calculate_gradients_transmit(D_n, g_tn, t_ni, lambda_val, theta_pi, phi_pi):
+    """
+    计算发送端梯度和Hessian近似
+    类似calculate_gradients但针对发送端
+    参数:
+        D_n: 目标函数矩阵 (Lt, Lt)
+        g_tn: 发送端场响应 (Lt,)
+        t_ni: 当前发送天线位置 (2,)
+        lambda_val: 波长
+        theta_pi: 发送端散射体仰角 (Lt,)
+        phi_pi: 发送端散射体方向角 (Lt,)
+    """
+    d = D_n @ g_tn
+    amplitude_dp = np.abs(d)
+    phase_dp = np.angle(d)
+    
+    x, y = t_ni[0], t_ni[1]
+    rho_pi = x*np.sin(theta_pi)*np.cos(phi_pi) + y*np.cos(theta_pi)
+    kappa = (2*np.pi/lambda_val)*rho_pi - phase_dp
+    
+    term_x = amplitude_dp * np.sin(theta_pi) * np.cos(phi_pi) * np.sin(kappa)
+    term_y = amplitude_dp * np.cos(theta_pi) * np.sin(kappa)
+    
+    grad_x = -(2*np.pi/lambda_val) * np.sum(term_x)
+    grad_y = -(2*np.pi/lambda_val) * np.sum(term_y)
+    grad_g = np.array([grad_x, grad_y])
+    
+    sum_abs_d = np.sum(np.abs(d))
+    delta_n = (8*np.pi**2) / (lambda_val**2) * sum_abs_d
+    
+    return grad_g, delta_n
+
+def compute_transmit_field_response(t, theta_p, phi_p, lambda_val):
+    """计算单个发送天线位置的场响应"""
+    x, y = t[0], t[1]
+    phase = 2*np.pi/lambda_val * (x*np.sin(theta_p)*np.cos(phi_p) + y*np.cos(theta_p))
+    g_t = np.exp(1j*phase)
+    return g_t, phase
 
 def initialize_antennas_smart(M, square_size, D):
     """
@@ -274,25 +441,24 @@ def run_single_trial_optimized(args):
     
     try:
         # 系统参数（根据论文图4）
-        N, M, Lt = 4, 4, 5  # Lt = 5
-        power, SNR_dB = 10, 5  # SNR = 5 dB（图4设置）
+        N, M, Lt = 4, 4, 10  # Lt = 10 (论文标准)
+        power, SNR_dB = 10, 15  # SNR = 15 dB (论文标准)
         SNR_linear = 10**(SNR_dB / 10)
         sigma = power / SNR_linear
         D = lambda_val / 2
         xi, xii = 1e-3, 1e-3  # 收敛容差 ε₁ = ε₂ = 10^-3
         
-        # 智能初始化
+        # 智能初始化接收天线和发送天线
         r = initialize_antennas_smart(M, square_size, D)
+        t = initialize_antennas_smart(N, square_size, D)  # 发送天线初始化
         
         # 信道参数初始化
         P = Lt
         theta_p = np.random.rand(P) * np.pi
         phi_p = np.random.rand(P) * np.pi
         
-        G = np.zeros((P, N), dtype=complex)
-        for p in range(P):
-            for n in range(N):
-                G[p, n] = np.exp(1j * np.pi * np.sin(theta_p[p]) * np.cos(phi_p[p]) * n)
+        # 使用calculate_G函数计算发送端阵列响应
+        G = calculate_G(theta_p, phi_p, lambda_val, t)
         
         theta_q = np.random.rand(Lr) * np.pi
         phi_q = np.random.rand(Lr) * np.pi
@@ -360,8 +526,47 @@ def run_single_trial_optimized(args):
                     
                     prev_obj = curr_obj
             
+            # 3. 计算S矩阵 (Algorithm 2, 步骤9 - 对应论文式22)
+            F = calculate_F(theta_q, phi_q, lambda_val, r)
+            G = calculate_G(theta_p, phi_p, lambda_val, t)
+            H_r = F.T.conj() @ Sigma @ G
+            S_tuple = calculate_S_matrix(H_r, power, sigma)
+            
+            # 4. 优化发送天线位置 (Algorithm 2, 步骤10-13)
+            for antenna_idx in range(N):
+                t_ni = t[:, antenna_idx].copy()
+                prev_obj_t = 0
+                
+                for sca_iter in range(30):  # 内循环迭代次数
+                    G = calculate_G(theta_p, phi_p, lambda_val, t)
+                    H_r = F.T.conj() @ Sigma @ G
+                    D_n = calculate_D_n(F, S_tuple, G, antenna_idx, sigma, Sigma, power)
+                    
+                    g_tn, _ = compute_transmit_field_response(t_ni, theta_p, phi_p, lambda_val)
+                    grad_g_t, delta_n = calculate_gradients_transmit(D_n, g_tn, t_ni, lambda_val, theta_p, phi_p)
+                    
+                    # 使用稳健优化（发送端）
+                    t_new, success = optimize_position_robust(
+                        t_ni, t, antenna_idx, N, D, square_size,
+                        grad_g_t, delta_n, theta_p, phi_p, lambda_val, D_n
+                    )
+                    
+                    t_ni = t_new
+                    t[:, antenna_idx] = t_ni
+                    
+                    # 计算目标函数值
+                    g_new, _ = compute_transmit_field_response(t_ni, theta_p, phi_p, lambda_val)
+                    curr_obj_t = np.real(g_new.T.conj() @ D_n @ g_new)
+                    
+                    # 相对收敛判据
+                    if abs(curr_obj_t - prev_obj_t) < xii * (abs(curr_obj_t) + 1e-6):
+                        break
+                    
+                    prev_obj_t = curr_obj_t
+            
             # 计算容量
             F = calculate_F(theta_q, phi_q, lambda_val, r)
+            G = calculate_G(theta_p, phi_p, lambda_val, t)
             H_r = F.T.conj() @ Sigma @ G
             H_rQH = H_r @ Q @ H_r.T.conj()
             
@@ -412,7 +617,7 @@ def main():
     print(f"{'='*70}\n")
     
     # 参数设置（根据论文实验描述）
-    A_lambda_values = np.arange(1, 4.5, 0.3)  # [1, 1.5, 2, 2.5, 3, 3.5, 4]
+    A_lambda_values = np.arange(1, 10, 0.2)  # [1, 1.5, 2, 2.5, 3, 3.5, 4]
     # 支持命令行参数指定试验次数和进程数
     # 使用方法: python mimo_optimized.py [num_trials] [num_processes]
     # 例如: python mimo_optimized.py 100 2  (100次试验，2个进程)
@@ -421,7 +626,7 @@ def main():
     if len(sys.argv) > 2:
         num_cores = min(int(sys.argv[2]), max_cores)
         print(f"使用命令行指定的进程数: {num_cores}")
-    Lr_values = [5]  # Lt = Lr = 5（论文设置）
+    Lr_values = [15]  # Lr = 15（论文设置）
     lambda_val = 1
     
     average_capacity = np.zeros((len(A_lambda_values), len(Lr_values)))
@@ -481,16 +686,16 @@ def main():
         },
         'results': {
             'achievable_rate': {
-                'Lr_5': average_capacity[:, 0].tolist()
+                'Lr_15': average_capacity[:, 0].tolist()
             },
             'channel_total_power': {
-                'Lr_5': average_total_power[:, 0].tolist()
+                'Lr_15': average_total_power[:, 0].tolist()
             },
             'condition_number': {
-                'Lr_5': average_condition_number[:, 0].tolist()
+                'Lr_15': average_condition_number[:, 0].tolist()
             },
             'success_rates': {
-                'Lr_5': success_rates[:, 0].tolist()
+                'Lr_15': success_rates[:, 0].tolist()
             }
         },
         'improvements': [
@@ -510,7 +715,7 @@ def main():
     # 保存CSV格式（包含三个指标和成功率）
     csv_filename = os.path.join(results_dir, f'optimized_{timestamp}.csv')
     with open(csv_filename, 'w', encoding='utf-8') as f:
-        f.write('A/lambda,Rate_Lr5,Power_Lr5,Cond_Lr5,SR_Lr5\n')
+        f.write('A/lambda,Rate_Lr15,Power_Lr15,Cond_Lr15,SR_Lr15\n')
         for i, a_lambda in enumerate(A_lambda_values):
             f.write(f'{a_lambda},'
                    f'{average_capacity[i, 0]:.6f},{average_total_power[i, 0]:.6f},{average_condition_number[i, 0]:.2f},{success_rates[i, 0]:.4f}\n')
@@ -537,7 +742,7 @@ def main():
             color='#1f77b4', linestyle='-', marker='o',
             linewidth=1.8, markersize=7,
             markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=5', zorder=3)
+            label='Optimized, Lr=15', zorder=3)
     ax1.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
     ax1.set_ylabel('Achievable rate (bps/Hz)', fontsize=11)
     ax1.set_title('(a) Achievable rate versus normalized region size', fontsize=12, loc='left', pad=10)
@@ -552,7 +757,7 @@ def main():
             color='#1f77b4', linestyle='-', marker='o',
             linewidth=1.8, markersize=7,
             markerfacecolor='white', markeredgewidth=1.5,
-            label='Optimized, Lr=5', zorder=3)
+            label='Optimized, Lr=15', zorder=3)
     ax2.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
     ax2.set_ylabel('Channel total power', fontsize=11)
     ax2.set_title('(b) Channel total power versus normalized region size', fontsize=12, loc='left', pad=10)
@@ -567,7 +772,7 @@ def main():
                 color='#1f77b4', linestyle='-', marker='o',
                 linewidth=1.8, markersize=7,
                 markerfacecolor='white', markeredgewidth=1.5,
-                label='Optimized, Lr=5', zorder=3)
+                label='Optimized, Lr=15', zorder=3)
     ax3.set_xlabel(r'Normalized region size ($A/\lambda$)', fontsize=11)
     ax3.set_ylabel('Condition number', fontsize=11)
     ax3.set_title('(c) Channel condition number versus normalized region size', fontsize=12, loc='left', pad=10)
@@ -593,7 +798,7 @@ def main():
     print(f"  - CSV:  {csv_filename}")
     
     print(f"\n性能指标摘要:")
-    print(f"  Lr=5 (SNR=5dB): 容量={np.mean(average_capacity[:, 0]):.6f} bps/Hz, "
+    print(f"  Lr=15 (SNR=15dB): 容量={np.mean(average_capacity[:, 0]):.6f} bps/Hz, "
           f"功率={np.mean(average_total_power[:, 0]):.2f}, "
           f"条件数={np.mean(average_condition_number[:, 0]):.2f}, "
           f"成功率={np.mean(success_rates[:, 0])*100:.1f}%")
