@@ -49,6 +49,13 @@ python mimo_comparison.py --snr 25 --trials 500 --cores 8
 ```
 *说明：高信噪比下，扫描范围自动调整为 $A/\lambda \in [1, 4]$。*
 
+**自定义模式对比:**
+```bash
+# 仅对比 Proposed (联合优化) 和 RMA (接收端移动) 方案
+python mimo_comparison.py --modes Proposed RMA --trials 50
+```
+*特点：灵活选择对比方案，节省计算资源。*
+
 ### 3. 参数详解
 | 参数 | 说明 | 默认值 |
 |---|---|---|
@@ -66,6 +73,7 @@ python mimo_comparison.py --snr 25 --trials 500 --cores 8
 ### 5. 核心代码说明
 - **`mimo_comparison.py`**: 主入口脚本，负责参数调度、并行计算和绘图。
 - **`mimo_optimized.py`**: 算法核心实现，包含 `MIMOSystem` 类和优化算法逻辑。
+- **`utils/extract_pdf.py`**: 辅助工具，用于从 PDF 提取文本内容。
 
 若需手动修改更底层的仿真参数（如修改散射体数量或自定义场景），请直接编辑 `mimo_comparison.py` 文件中的参数设置部分。
 
@@ -155,10 +163,14 @@ python mimo_comparison.py --snr 25 --trials 500 --cores 8
 
 ## 📂 文件结构
 
-- `mimo_optimized.py`: **核心仿真脚本** (推荐使用)。
-- `plot_paper_style_updated.py`: 用于重新绘制图表的辅助脚本。
+- `mimo_comparison.py`: **主入口脚本** (推荐使用)。
+- `mimo_optimized.py`: **核心算法实现**。
+- `utils/`: 包含辅助工具脚本。
+  - `extract_pdf.py`: PDF 文本提取工具。
 - `requirements.txt`: 项目依赖。
 - `results/`: 仿真结果输出目录。
+- `papers/`: 存放相关研究论文 PDF。
+- `README.md`: 项目文档。
 
 ---
 
