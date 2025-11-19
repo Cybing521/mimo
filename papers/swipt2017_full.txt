@@ -1,0 +1,2373 @@
+Metadata: {'/CreationDate': "D:20170713183408+05'30'", '/Title': 'untitled', '/ModDate': "D:20170810071428-04'00'", '/Producer': 'Acrobat Distiller 10.1.16 (Windows)'}
+--- Page 1 ---
+IEEE TRANSACTIONS ON WIRELESS COMMUNI CATIONS, VOL. 16, NO. 8, AUGUST 2017 5147
+Rate-Energy Region of SWIPT for MIMO
+Broadcasting Under Nonlinear Energy
+Harvesting Model
+Ke Xiong, Member, IEEE, Beibei Wang, Senior Member, IEEE ,a n dK .J .R a yL i u ,Fellow, IEEE
+Abstract— This paper explores the rate-energy (R-E) region of
+simultaneous wireless information and power transfer for MIMO
+broadcasting channel under the nonlinear radio frequency energy
+harvesting (EH) model. The goal is to characterize the tradeoff
+between the maximal energy transfer versus information rate.
+The separated EH and information decoding (ID) receivers and
+the co-located EH and ID receivers scenarios are considered.
+For the co-located receivers scenario, both time switching (TS)
+and power splitting (PS) receiver architectures are investigated.
+Optimization problems are formulated to derive the boundaries
+of the R-E regions for the considered systems. As the problems
+are nonconvex, we ﬁrst transform them into equivalent ones
+and derive some semi-closed-form solutions, and then design
+efﬁcient algorithms to solve them. Numerical results are provided
+to show the R-E regions of the systems, which provide some
+interesting insights. It is shown that all practical circuit speciﬁ-
+cations greatly affect the system R-E region. Compared with the
+systems under traditional linear EH model, the ones under the
+nonlinear EH model achieve smaller R-E regions due to the lim-
+itations of practical circuit features and also show very different
+R-E tradeoff behaviors.
+Index Terms— Simultaneous wireless information and power
+transfer, MIMO, rate-energy region, rate-energy tradeoff,
+nonlinear energy harvesting model.
+I. I NTRODUCTION
+R
+ECENTLY, radio frequency (RF) energy harvesting (EH)
+has attracted increasing interests, owing to its capability
+of converting received RF signals into electricity, which is able
+to provide stable and controllable power to prolong the lifetime
+of low-power energy-constrained networks, such as Internet
+of Things (IoT), wireless sensor networks (WSNs), wireless
+personal area networks (WPANs) and wireless body area
+Manuscript received July 28, 2016; revised November 12, 2016 and
+March 21, 2017; accepted May 14, 2017. Date of publication May 26,
+2017; date of current version August 10, 2017. This work was sup-
+ported in part by the National Natur al Science Foundation of China under
+Grant 61671051, in part by the Beijing Natural Science Foundation of China
+under Grant 4162049, in part by the Ope n Research Fund of National
+Mobile Communications Research Labor atory, Southeast University, under
+Grant 2014D03, and in part by the F undamental Research Funds for the
+Central Universities of Beijing Jiaotong University under Grant 2016JBM015.
+The associate editor coordinating the review of this paper and approving it
+for publication was W. H. Mow. (Corresponding author: Ke Xiong.)
+K. Xiong is with the School of Computer and Information Technology,
+Beijing Jiaotong University, Beijing 100044, China, and also with the National
+Mobile Communications Research Laborat ory, Southeast University, Nanjing
+210018, China (e-mail: kxiong@bjtu.edu.cn).
+B. Wang and K. J. R. Liu are with the Department of Electrical and
+Computer Engineering, University of Maryland at College Park,
+MD 20742 USA (e-mail: bebewang@umd.edu; kjrliu@umd.edu).
+Color versions of one or more of the ﬁgures in this paper are available
+online at http://ieeexplore.ieee.org.
+Digital Object Identiﬁer 10.1109/TWC.2017.2706277
+networks (WBANs) [1]–[4]. It was reported that with current
+available EH circuits, microwatts to milliwatts of power can be
+harvested from received RF signals over the range of several
+meters with a transmit power of 1 Watt and a carrier frequency
+less than 1 GHz [4].
+One important application of RF-EH is simultaneous wire-
+less information and power transfer (SWIPT), where the
+same RF signal is used to transfer both energy and infor-
+mation, which potentially offers great possibility to replen-
+ish power and transmit information to energy-constrained
+devices (e.g., low-power sensor nodes) [5]–[10]. In [5],
+the single-input single-output (SISO) channel was considered,
+where a capacity-energy function was proposed to character-
+ize the fundamental tradeoffs of SWIPT. It was shown that
+there exist a nontrivial tradeoff in maximizing information
+rate versus power transfer since the quantity of information
+contained in the RF signal is determined by the amount
+of “variations”, i.e., entropy rate, while its carried power is
+determined by the average squared value of the amplitude.
+In [6], this tradeoff was further extended to frequency-selective
+channels. Zhang and Ho [7] investigated the information-
+energy tradeoff of SWIPT ove r a three-node multiple-input-
+multiple-output (MIMO) broadcasting channel in terms of
+rate-energy (R-E) region . In their work, two scenarios were
+examined, i.e., the separated information decoding (ID) and
+EH receivers scenario where the EH and ID receivers have
+different MIMO channels from the transmitter, and the co-
+located EH and ID receivers scenario where the EH and ID
+receivers have identical MIMO channels from the transmitter.
+Zhang and Ho [7] also pointed out that it is impractical for
+EH and ID receivers to receive in formation and collect energy
+using the same circuit as the EH and ID receivers have very
+different power sensitivities and the EH operation performed
+in the RF domain destroys the information content. Therefore,
+two practical receiver architectures (i.e., time switching (TS)
+and power splitting (PS)) were proposed in [7] for the co-
+located receivers scenario. So far, SWIPT has become an
+appealing EH technique and been applied to various wireless
+communication networks [8]–[18]. For example, in [25]–[27],
+multiuser MISO broadcast SWIPT systems were investigated,
+where the weighted sum-power transferred to all EH receivers
+was maximized in [25], the total transmission power at BS
+was minimized [26], and the capacity region for ID receivers
+was explored [27], respectively.
+However, in all works mentioned above, the linear
+EH model was adopted, where the power conversion efﬁciency
+1536-1276 © 2017 I EEE. Personal u se is perm itted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 2 ---
+5148 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+of the RF-EH circuit, deﬁned as the ratio of the output
+direct currency (DC) power to the input RF signal power,
+was considered to be constant. That is, the output DC power
+was assumed to be independent of the input power level of
+the EH circuit. Recently, by m easurement with real RF-EH
+circuit data, the authors in [28] found that in practical systems,
+RF-EH circuits usually show a nonlinear end-to-end RF-EH
+behavior rather than the linear one. Therefore, using the linear
+EH model in SWIPT system design may result in the mismatch
+and system performance degr adation. To accurately capture
+the property of practical RF-EH circuits, [28] presented a
+nonlinear EH model based on the logistic function and real
+data. With the nonlinear EH model, [28] and [29] studied
+the resource allocation for multi-user SWIPT systems. It was
+shown that a substantial performance gain could be achieved
+when the resource allocation is performed with the nonlin-
+ear EH model instead of traditional linear EH model. Most
+recently, a few works began to study SWIPT systems with the
+nonlinear EH model, such as robu st beamforming design [30],
+wireless power transfer efﬁciency maximization [31] and sys-
+tem outage analysis [32], [33].
+As the nonlinear EH model is more practical and more
+accurate, in this paper, we focus on examining the performance
+limits of SWIPT MIMO broadcasting channel under the non-
+linear EH model. In our work, the R-E region is adopted as
+the system performance index, as it is effective to characterize
+the tradeoff between the information and energy transfer,
+which may provide some fundamental and useful references
+in optimally designing SWIPT-enabled systems [9]. Similar
+to [7], two scenarios, i.e., the separated and the co-located
+EH and ID receivers scenarios, are considered. For the
+co-located EH and ID receivers scenario, both TS and PS
+receiver architectures are investigated.
+The contributions of the paper are summarized as follows.
+Firstly, for the two MIMO scenarios with PS and TS
+receiver architectures, we derive the boundaries of their
+R-E regions, where some optimization problems on maximiz-
+ing the harvested energy are studied under a given information
+rate threshold with the nonlinear EH model constraint. Since
+the problems are non-convex and cannot be directly solved by
+using known solution methods, we propose efﬁcient methods
+to solve them. We prove that the nonlinear EH model is
+a mathematically increasing function w.r.t. the received RF
+signal power. Therefore, the optimal solution of the nonlinear
+EH model system may have a similar structure with that of
+the linear EH model system in [7].
+It is by no means that the optimal solution of the nonlinear
+EH model system can be directly derived by plugging the ana-
+lytical result of the nonlinear system in the solution structure
+of the linear EH system. The reason is explained as follows.
+In [7], the R-E boundaries of the linear EH systems were
+obtained by solving some optimization problems, in which the
+information rate was maximized under the harvested energy
+constraint. In linear EH model case, these problems are convex
+and can be easily solved. But in nonlinear EH model case, they
+are non-convex due to the nonlinear EH constraints, resulting
+in the difﬁculty to solve them. As an alternative, we con-
+sider the maximization problems, in which the harvested
+energy is maximized under the constraint of information rate,
+to draw the boundaries of the R-E regions for the nonlinear
+EH systems. By doing so, we can obtain some semi-closed
+results on the optimal solutions and then design efﬁcient
+solution algorithms. Therefore, both the considered problems
+and the solution methods are different from those in [7].
+Secondly, we also obtain some new results on the nonlinear
+EH system design compared with [7]. For example, for the
+TS system with the linear EH model, Zhang and Ho [7]
+found that the minimal consumed power at the transmitter
+for the EH receiver to harvest power is independent of
+the time switching factor. In contrast, for the TS system
+with the nonlinear EH model, we found that the minimal
+consumed power at the transmitter for the EH receiver to
+harvest power is closely dependent on the time switching
+factor. Thus, we design new solution method for the TS MIMO
+broadcasting system with the nonlinear EH model and our
+obtained results are very different from those of the linear
+EH model in [7]. Besides, for the PS system with the linear
+EH model, the optimal power splitting factors were searched
+with a small step size over the interval [0,1] in [7], which
+may be too computationally complex for the system with a
+relatively large number of antennas. While, for the PS system
+with the nonlinear EH model, we ﬁnd the optimal power
+splitting factors by solving a convex problem and derive a
+semi-closed form expression for them, which is with low
+complexity.
+Thirdly, numerical results with different circuit parame-
+ter conﬁgurations are provided to evaluate the system per-
+formance under the nonlinear EH model, which provides
+some interesting insights on the SWIPT MIMO broadcasting
+channel. It is shown that all pr actical circuit speciﬁcations
+greatly affect the system R-E region. Compared with the
+systems under current linear EH model, the ones under the
+practical nonlinear EH model achieve smaller R-E regions and
+show different R-E tradeoff behaviors. Particularly, with the
+increment of R, the average maximum harvested energy in the
+separated EH and ID receivers system and in the PS system
+with the nonlinear EH model d ecreases with an increasing
+declining rate, but decreases with an almost constant declining
+rate in the TS system with the nonlinear EH model. Addition-
+ally, the PS system achieves larger average R-E region than
+the TS one under the nonlinear EH model.
+The rest of the paper is organized as follows. Section II
+describes the system model. Section III and Section IV inves-
+tigate the R-E regions for the separated receivers scenario and
+the co-located receivers scenario , respectively, by formulating
+and solving corresponding optimization problems. Section V
+provides some simulation results and ﬁnally Section VI con-
+cludes the paper.
+Notations: C
+M×N , HM×N , RM×N denote the set of com-
+plex, Hermitian and real matrices with size of M rows and N
+columns, respectively. E(·) represents the expectation operator.
+∥·∥ denotes the Frobenius norm. Tr (X) is the trace of
+matrix X. I denotes an identity matrix and 0 denotes a
+zero matrix with all entries equaling to zero. [x]+ is the
+operator which is deﬁned as [x]+ = max{0, x}. ⪯ RM
++
+denotes
+the generalized inequality deﬁned over a set of non-negative
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 3 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5149
+M × M matrices. X ⪰ 0 indicates that X is a positive
+semideﬁnite (PSD) matrix.
+II. S YSTEM MODEL
+We consider a MIMO broadcasting network consisting of
+one transmitter, one EH receiver and one ID receiver, where
+all nodes are equipped with multiple antennas and the numbers
+of antennas at the transmitter, the EH and the ID receivers are
+denoted by N
+T, NE and NI, respectively. Let HE ∈ CNE×NT
+and HI ∈ CNI×NT be the channel matrices between the
+transmitter and the EH receiver and between the transmitter
+and the ID receiver, respectively. Quasi-static fading channel
+is assumed at each fading state. Both H
+E and HI are known at
+the transmitter and the corresponding receivers so that energy
+beamforming or information precoding can be performed at
+the transmitter to enhance the system performance.
+Denote s(k) ∈ C
+NT×1 as the baseband signal broadcast
+by the transmitter at the k-th symbol interval. Without loss
+of generality, s(k) is assumed to be random over k. Q =
+E[s(k)s(k)H ] is the covariance matrix of s(k) satisfying that
+E[∥s(k)∥2]= Tr(Q) ≤ P,w h e r eP is the average available
+power at the transmitter over all transmit antennas. There-
+fore, the received signal at the EH and ID receivers can be
+respectively given by y
+E(k) = HEs(k) + nE(k) and yI(k) =
+HIs(k) + nI(k), where nE(k) ∈ CNE×1 ∼ CN (0,σ 2
+E I) and
+nI(k) ∈ CNI ×1 ∼ CN (0,σ 2
+I I) are the noise received at the EH
+and ID receivers, respectively. For the EH receiver, the input
+power is E[∥HEs(k)∥2]= Tr(HEQHH
+E ). With the traditional
+linear EH model, the harvested energy at the EH receiver is
+given by
+Elinear = ηE[∥HEs(k)∥2]= ηTr(HEQHH
+E ), (1)
+where η ∈ (0,1] is a constant, denoting the energy conversion
+efﬁciency and it is independent of the input power level at the
+EH receiver.
+More recently, [28] found that the practical EH circuit
+results in a nonlinear end-to-end wireless power transfer so
+that they presented a nonlin ear EH model based on the
+measurement data of practi cal EH circuits, which is more
+accurate to describe the char acteristics of EH circuits. With
+the nonlinear EH model [28], [34], the harvested energy at
+the EH receiver can be given by
+Enonlinear =
+M
+1+exp
+(
+−a(Tr(HEQHH
+E )−b)
+) − M
+1+exp(ab)
+1 − 1
+1+exp(ab)
+≜ /Psi1
+(
+Tr(HEQHH
+E )
+)
+. (2)
+In (2), /Psi1(x) is deﬁned as a function of x, i.e., /Psi1(x) =
+β(x)−M/Omega1
+1−/Omega1, where /Omega1= 1
+1+exp(ab) and β(x) = M
+1+exp(−a(x−b))
+which is the traditional logistic function w.r.t. x. M is a con-
+stant, indicating the maximum harvested power at EH receiver
+when the EH circuit is saturated. Parameters a and b are
+constants depending on the detailed circuit speciﬁcations,
+such as resistance, capacitance and diode turn-on voltage.
+In practice, a, b,a n d M can be easily found by a standard
+curve ﬁtting tool. Such a nonlinear EH model is capable of
+capturing the joint effect of the nonlinear phenomena induced
+by hardware constraints, e.g., circuit sensitivity limitations and
+current leakage [28].
+It can be seen in (1) that with the linear EH model,
+the harvested energy can be increased with the increment of
+input power without limitation, while in (2), it was shown that
+with the nonlinear model, when the input power is relatively
+low, the harvested energy is increased with the increment
+of input power and the increasing rate is closely dependent
+on the parameters a and b. Moreover, there is a limitation
+on the maximum possible harvested energy for the nonlinear
+EH model. As the nonlinear EH model is more general and
+more accurate for practical EH sy stems, we shall investigate
+the MIMO broadcasting channel with it.
+By observing (1) and (2), we obtain the following result.
+Proposition 1: For the same H
+E and Q, the harvested
+energy of the nonlinear EH model over the MIMO broadcast-
+ing channel is bounded by that of the linear EH model with
+η = 1, i.e., E nonlinear ≤ Elinear|η=1.
+Proof: From (1), the harvested energy of the linear
+EH model is ηTr(HEQHH
+E ). From (2) of the nonlinear model,
+the input power is Tr (HEQHH
+E ) and the harvested energy is
+Enonlinear. Due to the law of conservation of energy, it is known
+that Enonlinear ≤ Tr(HEQHH
+E ).T h a ti sEnonlinear ≤ Elinear|η=1.
+In such a system, for the ID receiver, its obtained informa-
+tion rate can be given by [35]
+R = log |I + 1
+σ2
+I
+HIQHH
+I |. (3)
+It was proved in [7] that the maximal information delivering
+and power transfer are different from each other, which involve
+information spatial multiplexing and energy beamforming,
+respectively. Therefore, there is a tradeoff between them under
+given available power constraint, which can be described
+by the R-E region. Assuming the continuously transmitted
+signals from the transmitter is Gaussian signals, for example,
+the R-E region of MIMO channel with separated EH and ID
+receivers can be given by
+C
+R-E ≜
+{
+(R, E) | R ≤ log |I + 1
+σ2
+I
+HIQHH
+I |,
+E ≤ /Psi1
+(
+Tr(HEQHH
+E )
+)
+,Tr(Q) ≤ P,Q⪰ 0
+}
+. (4)
+As shown in Figure 1, there are two different scenarios for
+the MIMO broadcasting system. The ﬁrst one is with separated
+EH and ID receivers, see Figure 1 (a), and the second one is
+with co-located EH and ID receivers, see Figure 1 (b). For the
+co-located EH and ID receivers scenario, two practical receiver
+architectures, i.e., TS and PS receiver architectures, were
+proposed in [7]. With TS architecture employed, the receiver
+switches in time domain between the EH and ID receivers
+and the entire signal received in one time slot is used either
+for ID or EH, as shown in Figure 1 (b). With PS architecture
+employed, the received signals are split into two streams of
+different power levels in terms of a PS factor, where one signal
+stream is sent to the rectenna circuit for EH and the other is
+converted to baseband for ID, as shown in Figure 1 (b)(2).
+Comparatively, the TS archit ecture allows for a simple hard-
+ware implementation at the receiver but requires accurate time
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 4 ---
+5150 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+Fig. 1. System model: (a) Separated EH and ID receiver; (b) Co-located
+EH and ID receivers: (1) TS receiver architecture and (2)PS receiver archi-
+tecture.
+synchronization and information/energy scheduling while the
+PS architecture doesn’t need accurate time synchronization
+and information/energy scheduling but requires a relatively
+complex hardware implementation.
+In Section III and IV, we shal l respectively discuss the
+R-E regions of the MIMO broadcasting system with separated
+receivers and co-located receivers, respectively.
+III. R-E R EGION FOR SEPARATED EH AND ID R ECEIVERS
+In this section, we consider the MIMO broadcasting system
+with separated EH and ID receivers, whose R-E region is
+described by (4). To ﬁgure out the R-E region, the four
+points on the region boundary, i.e., (0, Emax),( REH, Emax),
+(Rmax, EID) and (Rmax,0) on the R-E coordinate plane, should
+be determined at ﬁrst.
+A. Calculation of E max
+To ﬁnd out Emax, the case when the ID receiver is not
+present should be considered. In this case, the objective of the
+MIMO system design is to maximize the harvested energy
+E under the transmitter’s power constraint, which can be
+express by
+P1 : max
+QE
+Enonlinear = /Psi1
+(
+Tr(HEQEHH
+E )
+)
+s.t. Tr(QE) ≤ P, QE⪰ 0, (5)
+where QE is the energy beamforming covariance matrix at the
+transmitter, which is require d to be optimized. Although the
+two constraints in Problem P1 are convex sets, the objective
+function /Psi1(Tr(HEQEHH
+E )) is neither convex nor concave
+w.r.t QE. So, it cannot be directly solved by using standard
+solution method for convex problems. However, fortunately,
+we found the following property of the objective function.
+Lemma 1: /Psi1(x) is a monotonically increasing function
+w.r.t x .
+Proof: Suppose x1 > x2 > 0. It can be easily proved that
+/Psi1(x1) − /Psi1(x2) > 0 always holds by some simple algebraic
+operations. Therefore, Lemma 1 is proved.
+Lemma 1 indicates the following two facts:
+Fact 1: E nonlinear = /Psi1
+(
+Tr(HEQEHH
+E )
+)
+is an injective
+function w.r.t Tr(HEQEHH
+E ),v i s ev e r s a ;
+Fact 2: Al a r g e rT r(HEQEHH
+E ) yields a higher Enonlinear.
+Lemma 2: Suppose f (x) is a concave function
+and Ϝ ( f (x)) is a monotonically increasing function
+of f (x), then the two optimization problems,
+i.e., max x f (x) subject to C 1(x),C2(x) ,..., Cm (x) and
+maxx Ϝ ( f (x)) subject to C 1(x),C2(x) ,..., Cm (x) have the
+same optimal solution (but usually different optimal values of
+the objective functions), where C i (x) is a convex set for all
+i = 1,..., m.
+Proof: Since the two problems have the same constraints,
+they have the same feasible solution sets. Moreover, as f (x) is
+concave, there exists a unique optimal solution x∗ for problem
+maxx f (x) subject to C1(x), C2(x), ... , Cm (x) such that
+f (x∗) achieves the maximum. Suppose there exists another
+x♯ satisfying that β( f (x♯)) > Ϝ ( f (x∗)).A s β( f (x)) is a
+monotonically increasing function of f (x), it indicates that
+f (x♯)> f (x∗), which contradicts that x∗ is the optimal
+solution of max x f (x). Therefore, such a x♯ does not exist,
+which implies that Ϝ ( f (x∗)) achieves its maximum, i.e., x∗ is
+also the optimal solution of the optimization problem Ϝ ( f (x))
+subject to C1(x), C2(x), ... , Cm (x).
+According to Lemma 1 and Lemma 2, it can be deduced
+that Problem P1 has the same solution of the following
+Problem P′
+1, i.e.,
+P′
+1 : max
+QE
+Tr(HEQEHH
+E ) s.t. Tr(QE) ≤ P, QE⪰ 0. (6)
+It means that once the optimal Q∗
+E of Problem P′
+1 is found,
+by substituting it into the objective function of Problem P1,
+one can obtain Emax. Since Problem P′
+1 has the similar form
+to the problem P1 in [7], the optimal solution of Problem P′
+1
+can be accordingly given by
+Q∗
+E = Pv(1)
+E (v(1)
+E )H , (7)
+where v(1)
+E is the ﬁrst column of VE. VE ∈ CNT×min{NT ,NE}
+is obtained by the singular value decomposition (SVD) of
+channel matrix HE, i.e., HE = UE/Sigma1EVH
+E ,w h e r e /Sigma1E =
+diag
+(√
+h(e)
+1 ,
+√
+h(e)
+2 ,...,
+√
+h(e)
+min{NT,NE}
+)
+with h(e)
+1 ≥ h(e)
+2 ≥
+... ≥ h(e)
+min{NT,NE} ≥ 0. UE ∈ CNE×min{NT,NE} and VE ∈
+CNT×min{NT ,NE}, each of which consists orthogonal columns
+with unit norm. Consequently,
+Emax = /Psi1(h(e)
+1 P). (8)
+B. Calculation of R max
+To ﬁnd out Rmax, the case when the EH receiver is not
+present should be considered. In this case, the objective of the
+MIMO system design is to maximize the received information
+R under the transmitter’s power constraint, which can be
+expressed by
+P
+2 : max
+QI
+R = log | I + 1
+σ2
+I
+HIQIHH
+I |
+s.t. Tr(QI) ≤ P, QI⪰ 0, (9)
+where QI is the information precoding covariance matrix
+at the transmitter, which is required to be optimized.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 5 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5151
+According to [35], the optimal solution follows the following
+structure, i.e.,
+Q∗
+I = VI/Lambda1SI VH
+I , (10)
+where VI ∈ CNT×min{NT,NI} is obtained by the SVD
+of channel matrix HI,i . e . , HI = UI/Sigma1IVH
+I and /Sigma1I =
+diag
+(√
+h(I)
+1 ,
+√
+h(I)
+2 ,...,
+√
+h(I)
+min{NT,NI}
+)
+with h(I)
+1 ≥ h(I)
+2 ≥
+... ≥ h(I)
+min{NT,NI} ≥ 0. /Lambda1SI = diag(p1, p2,..., pmin{NT ,NI})
+with the elements derived from standard water-ﬁlling
+power allocation [35], i.e., pi =
+[
+ν − 1
+h(I)
+i
+]+
+,∀i =
+1,2,..., min{NT, NI},w h e r eν is a positive constant (the
+water-level contant) such that ∑ min{NT,NI}
+i=1 pi = P. As a result,
+the corresponding maximum information rate can be given by
+Rmax =
+∑ min{NT,NI}
+i=1 log
+(
+1 + pi h(I)
+i
+σ2
+I
+)
+. (11)
+Now, with the obtained Emax and Rmax above, the other
+two boundary points i.e., (REH, Emax) and (Rmax, EID) of
+the R-E region can be obtained. We consider the case where
+EH and ID receivers are co-exist to determine REH and EID.
+Speciﬁcally, REH is the achieved information rate at the ID
+receiver when the transmitter adopts the optimal precoding
+matrix in (7) to achieve E
+max at the EH receiver. Thus, we have
+REH = log
+(
+1 + P
+σ2
+I
+∥HIv(1)
+E ∥2
+)
+. EID is the harvested energy
+at the EH receiver when the transmitter adopts the optimal
+beam matrix in (10) to achieve Rmax at the ID receiver and it
+can be given by EID = /Psi1
+(
+Tr(VI/Lambda1SI VH
+I )
+)
+.
+C. R-E Region of the Separated EH and ID Receivers System
+When R ≤ REH, Emax is achievable at the EH receiver with
+the transmit covariance matrix in (7) adopted at the transmitter.
+When E ≤ EID, Rmax is achievable at the ID receiver with the
+transmit covariance matrix in (10) adopted at the transmitter.
+Therefore, it only needs to determine the boundary of CR-E
+over the intervals REH ≤ R ≤ Rmax and EID ≤ E ≤ Emax on
+the R-E plane. To do so, either of the following optimization
+problems can be considered, i.e.,
+P3 : max
+Q
+R = log | I + 1
+σ2
+I
+HIQHH
+I |
+s.t. /Psi1
+(
+Tr(HEQHH
+E )
+)
+≥ E, Tr(Q) ≤ P, Q⪰ 0,
+(12)
+where E takes values from EID to Emax,o r
+P4 : max
+Q
+Enonlinear = /Psi1
+(
+Tr(HEQHH
+E )
+)
+s.t. log | I + 1
+σ2
+I
+HIQHH
+I |≥ R, Tr(Q) ≤ P, Q⪰ 0,
+(13)
+where R takes values from REH to Rmax. It is observed
+that in Problem P3, the objective function is concave, but
+the constraint, /Psi1
+(
+Tr(HEQHH
+E )
+)
+≥ E, is a non-convex set.
+In Problem P4, all the constraints are convex sets but the
+objective function is neither convex nor concave. Hence, both
+Problem P3 and Problem P4 are non-convex and cannot
+be directly solved. However, we found that by solving the
+following Problem P′
+4, one can obtain the same solution to
+Problem P4.
+P′
+4 : max
+Q
+Tr(HEQHH
+E )
+s.t. log | I + 1
+σ2
+I
+HIQHH
+I |≥ R, Tr(Q) ≤ P, Q⪰ 0,
+(14)
+which is a convex problem.
+Lemma 3: Problem P′
+4 has the same optimal solution with
+Problem P4.
+Proof: One can see that the constraint sets of both
+Problem P4 and Problem P′
+4 are the same. According
+to Fact 1, Lemma 1 and Lemma 2, it can be easily
+proved that Problem P4 has the same optimal solution with
+Problem P′
+4.
+Therefore, we consider Problem P4 and Problem P′
+4 to
+determine the boundary of the R-E region for MIMO broad-
+casting with separated EH and ID receivers. 1 The Lagrangian
+of Problem P′
+4 can be given by
+L (Q,μ,ν)
+= Tr(HEQHH
+E ) + μ
+(
+log | I + 1
+σ2
+I
+HIQHH
+I |− R
+)
++ ν (P − Tr(Q))
+= Tr
+(
+(HH
+E HE − νI)Q
+)
++ μ log | I + 1
+σ2
+I
+HIQHH
+I |
++ νP − μR, (15)
+where μ and ν are non-negative Lagrangian multipliers. Then,
+the Lagrangian dual function of Problem P′
+4 is deﬁned as
+G = max
+Q⪰ 0
+L (Q,μ,ν) (16)
+and the dual problem of Problem P′
+4 is
+min G (μ, ν) s.t. μ ≥ 0,ν ≥ 0. (17)
+Lemma 4: The Lagrangian multiplier ν in (15) satisﬁes
+that ν>λ 1,w h e r e λ1 is obtained by performing SVD
+on matrix HIB−1
+2 ,i . e . , HIB−1
+2 = ˆU/Lambda1HIB ˆV
+H
+. /Lambda1HIB =
+diag
+(√
+λ1,√
+λ2,..., √
+ λmin{NT ,NI}
+)
+with λ1 ≥ λ2 ≥ ... ≥
+λmin{NT ,NI} ≥ 0 and B ≜ νI − HH
+E HE.
+Proof: The proof of Lemma 4 can be found in Appen-
+dix A.
+Theorem 1: For given ν>λ 1, the optimal solution
+of (16) is
+Q♯ = B−1
+2 ˆV/Lambda1F ˆV
+H
+B−1
+2 , (18)
+where ˆV is obtained by performing SVD on matrix HIB−1
+2 ,
+1Note that for the linear EH model case, the energy constraint
+/Psi1
+(
+Tr(HEQHH
+E )
+)
+≥ E reduces to Tr (HEQHH
+E ) ≥ /Psi1−1(E),w h i c hi sa
+convex set. So, Problem P3 in the linear EH case is a convex problem.
+Therefore, in [7], Problem P3 was considered to drive the R-E region of
+linear EH model system rather than Problem P4.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 6 ---
+5152 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+i.e., HIB−1
+2 = ˆU/Lambda1HIB ˆV
+H
+and
+/Lambda1F = diag
+((
+μ
+σ2NI
+I ln 2
+− 1
+λ1
+)+
+,
+(
+μ
+σ2NI
+I ln 2
+− 1
+λ2
+)+
+,...,
+(
+μ
+σ2NI
+I ln 2
+− 1
+λmin{NT,NI }
+)+)
+.
+(19)
+and μ should be selected to meet the constraint Tr (Q♯ ) = P.
+Proof: The proof of Theorem 1 can be found in
+Appendix B.
+Now, we begin to solve the dual problem (17) by adopt-
+ing the sub-gradient method, which can be described by
+Algorithm 1, where current optimal Q∗ is calculated according
+to (18) with the given μ(n) and ν(n) and then the sub-gradient
+of G (μ, ν) is calculated and μ(n) and ν(n) are updated with an
+appropriate step size of the n-th iteration, ϱ (n).2 When μ(n)
+and ν(n) converge to the pre-deﬁned precision ϵ, the global
+optimal μ∗ and ν∗ are obtained. Substituting them into (18),
+the global optimal Q∗, i.e. the optimal solution of Problem P′
+4
+and P4, can be derived. Note that as Problem P4 is a convex
+problem, the duality gap between it and its dual problem is
+zero, which means the global optimal solution is guaranteed.
+Algorithm 1 Calculate the Optimal Q∗
+1: Initialization:
+Set ν(0) >λ 1, μ(0) ≥ 0;
+Calculate Q♯ according to (18) with the given ν(0);
+Calculate μ(1) =
+[
+μ(0) − ϱ (0)(
+log | I + 1
+σ2 HIQ♯ HH
+I |
+−R)]+
+;
+Calculate ν(1) =
+[
+ν(0) − ϱ (0) (P − Tr(Q))
+]+ ;
+Set n = 1;
+2: Repeat:
+3: while |ν(n) − ν(n−1)| >ϵ or |μ(n) − μ(n−1)| >ϵ do
+4: Calculate Q♯ according to (18) with the given ν(n);
+5: Update μ(n+1) =
+[
+μ(n) − ϱ (n)(
+log | I + 1
+σ2 HIQ♯ HH
+I |
+−R
+)]+
+;
+Update ν(n+1) =
+[
+ν(n) − ϱ (n)(
+P − Tr(Q)
+)]+
+;
+6: n = n + 1;
+7: end while
+8: Return Q∗ = Q♯.
+Proposition 2: The R-E region of the MIMO broadcasting
+channel with separated EH and ID receiver under the nonlin-
+ear EH model is bounded by that under linear EH model with
+η = 1.
+Proof: From Proposition 1, we know that the maxi-
+mal harvested energy under the nonlinear EH model must
+be equal or lower than that the linear EH model with
+η = 1, i.e., E
+(nonlinear)
+max ≤ E(linear)
+max . Moreover, the R(nonlinear)
+max
+in (11) is the same with that of the linear EH model,
+i.e., R(nonlinear)
+max = R(linear)
+max . This means that the four points,
+2The value of ϱ (n) should be selected according t o backtracking line search
+method [36] for achieving fast convergence.
+(0, Emax), ( REH, Emax), (Rmax, EID) and (Rmax,0) on the
+region boundary of the nonlinear model is bounded by those
+of the linear model. Furthermore, since Problem P4 has the
+same optimal solution with Problem P′
+4, combining it with
+Proposition 1, it can be known that the optimal value of
+Problem P4 can not be larger than that of Problem P′
+4,w h i c h
+means that the boundary curve associated with the nonlinear
+model from R
+EH to Rmax is also bounded by that associated
+with the linear model with η = 1. As a result, Proposition 2
+is arrived.
+IV . R-E R EGION OF CO-LOCATED EH AND ID R ECEIVERS
+When EH and ID receivers are co-located, HE = HI and
+NE = NI. For convenience, we deﬁne H ≜ HE = HI and
+N ≜ NE = NI. To ﬁgure out the R-E region described by (4)
+for the co-located receiver case, the two points on the boundary
+of the R-E region should be determined at ﬁrst, i.e., (0, Emax)
+and (Rmax,0). It can be easily known that the results asso-
+ciated with Emax and Rmax shown in (8) and (10) still hold
+for the co-located receiver case. Therefore, the boundary of
+the R-E region can be determined by considering following
+optimization problem,
+P
+5 : max
+Q
+Enonlinear = /Psi1
+(
+Tr(HQHH )
+)
+s.t. log | I + 1
+σ2 HQHH |≥ R, Tr(Q) ≤ P, Q⪰ 0,
+(20)
+where R takes values from 0 to Rmax.
+A. Time Switching
+With the time switching recei ver architecture, the time
+switcher switches the signal input between the EH and ID
+receivers in time domain with a time switching factor θ,w h e r e
+0 ≤ θ ≤ 1. Similar to [7], two types of power constraints can
+be considered for the TS system, i.e., ﬁxed power and ﬂexible
+power constraints. For ﬁxed power constraint, its R-E region
+is expressed as
+C TS1
+R-E ≜
+⋃
+0≤θ≤1
+{
+(R, E) | E ≤ θ/Psi1
+(
+Tr(HQEHH )
+)
+,
+R ≤ (1 − θ) log |I + 1
+σ2 HQIHH |,
+Tr(QE) ≤ P, Tr(QI) ≤ P, QE,QI⪰ 0
+}
+. (21)
+For ﬂexible power constraint, its R-E region can be
+expressed as
+C TS2
+R-E ≜
+⋃
+0≤θ≤1
+{
+(R, E) | E ≤ θ/Psi1
+(
+Tr(HQEHH )
+)
+,
+R ≤ (1 − θ) log |I + 1
+σ2 HQIHH |,
+θTr(QE) + (1 − θ)Tr(QI) ≤ P,QE,QI⪰ 0
+}
+. (22)
+Since any pair of (QE⪰ 0,QI⪰ 0) satisfying the ﬁxed
+power constraint always satisfy the ﬂexible power constraint,
+the result C
+TS1
+R-E ⊆ C TS2
+R-E obtained in [7] with under linear
+EH model also holds for the nonlinear EH model. Our
+goal is to explore the potential achievable R-E region of the
+MIMO broadcasting channel under the nonlinear EH model.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 7 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5153
+Therefore, in the following, we only focus on the boundary
+of C TS2
+R-E .
+For a given θ, according to (8), the maximal energy can be
+harvested is θ/Psi1(PEh1) when QE = PEv(1)
+H (v(1)
+H )H ,w h e r eh1
+is obtained by the SVD of channel matrix H. v(1)
+H is the
+eigenvector of the matrix HH H corresponding to the largest
+eigenvalue h1 and PE is the consumed transmit power for
+energy transfer. In order to harvest energy with amount of E,
+we can calculate the minimal consumed power by solving E =
+θ/Psi1(PEh1).S i n c e/Psi1−1(x) = 1
+a ln
+( x
+M exp(ab)+1
+x
+M +1
+)
+, we have
+that h1 PE = 1
+a ln
+( E/θ
+M exp(ab)+1
+E/θ
+M +1
+)
+. As a result, the minimal
+consumed power at the transmitter for the EH receiver to
+harvest power E is given by
+PE = 1
+ah1
+ln
+( E/θ
+M exp(ab)+1
+1+ E/θ
+M
+)
+,
+which depends on θ. This result is very different from that of
+the linear EH model case in [7], where the minimum consumed
+energy is independent of θ. Thus, the method proposed in [7]
+cannot be used to explore the R-E region of (22). Instead, we
+consider the following optimization problem to determine the
+boundary of C
+TS2
+R-E .
+P6 : max
+QE,QI ,θ
+θ/Psi1
+(
+Tr(HQEHH )
+)
+s.t. (1 − θ) log |I + 1
+σ2 HQIHH |≥ R,
+θTr(QE) + (1 − θ)Tr(QI) ≤ P,
+QE, QI⪰ 0, 0 ≤ θ ≤ 1. (23)
+It is observed that Problem P6 is not joint convex w.r.t QE, QI
+and θ due to the coupling of them, so the optimal solution of
+the three variables cannot be jointly solved by using known
+convex optimization solution methods. Therefore, we solve it
+as follows.
+1) Optimal Q
+♯
+E and Q♯
+I for Given θ: For a given θ, Prob-
+lem P6 is reduced to
+max
+QE,QI
+θ/Psi1
+(
+Tr(HQEHH )
+)
+s.t. (1 − θ) log |I + 1
+σ2 HQIHH |≥ R,
+θTr(QE) + (1 − θ)Tr(QI) ≤ P,
+QE⪰ 0, QI⪰ 0, (24)
+which is non-convex. Nevertheless, similar to Problem P4,
+we found that problem (24) has the same optimal solution
+with the following optimization problem, i.e.,
+max
+QE,QI
+Tr(HQEHH )
+s.t. (1 − θ) log |I + 1
+σ2 HQIHH |≥ R,
+θTr(QE) + (1 − θ)Tr(QI) ≤ P, QE⪰ 0, QI⪰ 0, (25)
+which is joint convex w.r.t QE and QI, and can be solved by
+using convex optimization methods.
+2) Optimal θ♯ for Given QE and QI: With the optimal
+solution of (25), i.e., (Q♯
+E,Q♯
+I ), problem (23) is expressed by
+max
+θ
+θ/Psi1
+(
+Tr(HQ♯
+EHH )
+)
+s.t. (1 − θ) log |I + 1
+σ2 HQ♯
+I HH |≥ R,
+θTr(Q♯
+E) + (1 − θ)Tr(Q♯
+I ) ≤ P, 0 ≤ θ ≤ 1. (26)
+Lemma 5: The optimal solution of problem (26) is
+θ♯ =
+⎧
+⎪⎪
+⎪
+⎪
+⎪
+⎪
+⎨
+⎪⎪
+⎪
+⎪
+⎪
+⎪
+⎩
+min
+{
+1 − R
+log |I + 1
+σ2 HQ♯
+I HH |
+, P − Tr(Q♯
+I )
+Tr(Q♯
+E) − Tr(Q♯
+I )
+}
+,
+if Tr(Q♯
+E)> Tr(Q♯
+I );
+1 − R
+log |I + 1
+σ2 HQ♯
+I HH |
+, if Tr(Q♯
+E) ≤ Tr(Q♯
+I ).
+(27)
+Proof: From the constraint (1 −θ) log |I + 1
+σ2 HQ♯
+I HH |≥
+R, it is known that θ ≤ 1 − R
+log |I+ 1
+σ2 HQ♯
+I HH |
+.M o r e o v e r ,
+it can be obtained that θ(Tr(Q♯
+E) − Tr(Q♯
+I )) ≤ P − Tr(Q♯
+I )
+from the constraint θTr(Q♯
+E) + (1 − θ)Tr(Q♯
+I ) ≤ P.W h e n
+Tr(Q♯
+E)> Tr(Q♯
+I ), θ ≤ P−Tr(Q♯
+I )
+Tr(Q♯
+E)−Tr(Q♯
+I ).W h e nT r(Q♯
+E)< Tr(Q♯
+I ),
+θ ≥ P−Tr(Q♯
+I )
+Tr(Q♯
+E)−Tr(Q♯
+I ).W h e nT r(Q♯
+E) = Tr(Q♯
+I ), θ can be any
+value within [0,1]. Besides, the objective function shows that
+the larger θ, the higher θ/Psi1
+(
+Tr(HQ♯
+EHH )
+)
+. According to the
+above analysis, Lemma 5 is proved.
+3) Jointly Optimal θ∗, Q∗
+E and Q∗
+I : Then we ﬁnd the optimal
+(Q∗
+E, Q∗
+I , θ∗) with an iterative algorithm as described in
+Algorithm 2, where ϵ> 0 is the termination condition of
+Algorithm 2.
+Algorithm 2 Jointly Optimazing Q∗
+E, Q∗
+I and θ∗
+1: Initialization:
+Set θ = ε;
+Set Epre = 1a n d Ecur = 0;
+2: Repeat:
+3: while |Ecur − Epre| >ϵ do
+4: Calculate Q♯
+E and Q♯
+I by solving Problem (25);
+5: Update θ♯ according to (27);
+6: Epre = Ecur;
+7: Update Ecur = θ♯ /Psi1
+(
+Tr(HQ♯
+EHH )
+)
+;
+8: end while
+9: Return Q♯
+E, Q♯
+I and θ♯ as the ﬁnal solution.
+Convergence analysis :L e t F = θ/Psi1
+(
+Tr(HQEHH )
+)
+.
+Then, ∂F
+∂θ = /Psi1(Tr(HQEHH )) > 0a n d ∂F
+∂QE
+=
+θ/Psi1′ (
+Tr(HQEHH )
+)
+Tr(HHH )> 0, which means that F is an
+increasing function w.r.t either θ or QE. Moreover, according
+to the constraints in problem (24), it can be inferred that if
+θ is increased, Tr (QE) decreases, so does Tr (HQEHH ) and
+/Psi1
+(
+Tr(HQEHH )
+)
+.W h e n θ = 0, F = 0. If one increases θ
+from 0 to a small positive number, F > 0, which indicates
+that F ﬁrstly increases with the increment of θ. Then, if one
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 8 ---
+5154 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+goes on increasing θ,w h e t h e rF increasing or not will be
+determined by the contribution of θ and Tr(QE) to F .I ft h e
+contribution of θ to F is larger than that of Tr (QE) to F , F
+will increase. Otherwise, F will decrease. It means that F is
+an increasing function or a ﬁrstly increasing and then decreas-
+ing function. For both cases, there exists a maximum F ∗.
+In Algorithm 2, for a given Q♯
+E and Q♯
+I , θ is optimized to
+increase F , which means that the value of θ associated with
+current iteration is always larger than that associated with the
+previous one. If ε is set to be a very small positive number,
+Algorithm 2 can converge to the optimal F ∗.
+Proposition 3: The R-E region of the MIMO broadcasting
+channel with TS receiver under the nonlinear EH model is
+bounded by that under the linear EH model with η = 1.
+Proof: Similar to the proof of Proposition 2, we have that
+E(nonlinear)
+max ≤ E(linear)
+max and R(nonlinear)
+max = R(linear)
+max . Moreover,
+as Problem (24) has the same optimal solution to (25), com-
+bining it with Proposition 1, the optimal value of (24) cannot
+be larger than that of (25), which means that the R-E boundary
+associated with the nonlinear model from 0 to R
+max is bounded
+by that associated with the linear model with η = 1. Hence,
+Proposition 3 is proved.
+B. Power Splitting
+With power splitting receiver architecture, the received
+signal at each receiving antenna of the receiver is splitted into
+two streams by a power splitter with a power splitting factor
+ρ,w h e r e√
+ρ part is input into the EH receiver and the rest√
+1 − ρ is input into the ID receiver. Similar to [7], we also
+consider the practical case, where σ2
+A ≪ σ2
+P and σ2 = σ2
+A+σ2
+P .
+σ2
+A and σ2
+P are the noise power induced by the antenna and
+the baseband signal processing, respectively. The R-E region
+obtained in this case can be approximately regarded as a lower
+bound of the PS scheme.3 As the antenna noise can be ignored,
+it is assumed that σ2
+A = 0a n d σ2
+P = 1. This is equivalent to
+the situation that the aggregated receiver noise power remains
+constant with a power splitter at each receiving antenna.
+Let ρi be the power splitting ratio associated with the i-th
+receiving antenna, 0 ≤ ρi ≤ 1a n d i = 1,..., N. Particularly,
+when ρi ∈{ 0,1}, the PS architecture reduces to a new receiver
+architecture, i.e., antenna switc hing (AS) architecture, where
+ρi = 1 indicates that the i-th antenna is switched to transfer
+power and ρi = 0 indicates that the i-th antenna is switched
+to transmit information. Ther efore, AS architecture actually
+is a special case of PS architecture and PS-based systems
+have larger R-E regions than AS-based systems. Since our
+goal is to explore the potential achievable R-E regions of
+practical MIMO broadcasting channels, we investigate the PS
+architecture to achieve generality.
+3With power splitting, the noise of σ2
+A is divided into two parts, where
+(1 − ρ)σ 2
+A is input into the information receiver. Thus, the total noise for
+information decoding is (1−ρ)σ 2
+A +σ2
+P .F o raﬁ x e dσ2,s i n c eσ2
+A +σ2
+P = σ2,
+when 0 <σ 2
+A <σ 2 or σ2
+A >> σ2
+P , (1−ρ)σ 2
+A+σ2
+P = (1−ρ)σ 2
+A+σ2−σ2
+A =
+σ2−ρσ 2
+A <σ 2.B u tw h e nσ2
+A ≪ σ2
+P , σ2
+A → 0a n d σ2
+P → σ2. In this case,
+(1−ρ)σ 2
+A+σ2
+P
+.= σ2
+P = σ2, which has the biggest total noise for information
+decoding and yields the smallest R-E region among all cases [7]. Therefore,
+when σ2
+A ≪ σ2
+P , the obtained R-E region can be approximately considered
+as a performance lower bound for the PS scheme with nonlinear EH model.
+Deﬁne /Omega1ρ = diag(ρ1,ρ2,...,ρ N ) as the diagonal matrix
+of the power splitting vector associated with the N receiv-
+ing antennas, so we have that 0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I. Then,
+the R-E region of the PS scheme with nonlinear EH model
+in the worst case can be given by
+C (PS)
+R-E ≜
+⋃
+0⪯
+RNT+
+/Omega1ρ⪯
+RNT+
+I
+{
+(R, E)|E ≤ /Psi1
+(
+Tr(/Omega1ρHQHH )
+)
+,
+R ≤ log |I + 1
+σ2 ¯/Omega1
+1
+2
+ρ HQHH ¯/Omega1
+1
+2
+ρ |,
+Tr(Q) ≤ P, Q ⪰ 0
+}
+, (28)
+where ¯/Omega1ρ = I−/Omega1ρ. Q is the transmit beamforming covariance
+matrix, which determines both the transferred energy and
+information from the transmitter. To ﬁgure out the boundary
+of the R-E region, we consider the following optimization
+problem,
+P7 : max
+Q,/Omega1ρ
+/Psi1
+(
+Tr(/Omega1ρHQHH )
+)
+s.t. log |I + 1
+σ2 ¯/Omega1
+1
+2
+ρ HQHH ¯/Omega1
+1
+2
+ρ |≥ R, Tr(Q) ≤ P,
+Q ⪰ 0, 0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I. (29)
+Deﬁning Hρ ≜ ¯/Omega1
+1
+2
+ρ H and Fρ ≜ /Omega1
+1
+2
+ρ H, (28) can be re-
+expressed by
+max
+Q,/Omega1ρ
+/Psi1
+(
+Tr(FρQFH
+ρ )
+)
+s.t. log |I + 1
+σ2 HρQHH
+ρ |≥ R, Tr(Q) ≤ P,
+Q⪰ 0, 0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I. (30)
+Since the problem is not joint convex or concave w.r.t. Q
+and /Omega1ρ, we analyze and solve it as follows.
+1) Optimal Q♯ for Given /Omega1ρ: For a given /Omega1ρ, Problem (30)
+is reduced to
+max
+Q
+/Psi1
+(
+Tr(FρQFH
+ρ )
+)
+s.t. log |I + 1
+σ2 HρQHH
+ρ |≥ R, Tr(Q) ≤ P, Q⪰ 0, (31)
+which has a similar form with Problem P4 and can be solved
+by using the same solution method of Problem P4.
+2) Optimal /Omega1ρ for Given Q♯: With the obtained Q♯, Prob-
+lem P7 can be re-expressed as
+max
+/Omega1ρ
+/Psi1
+(
+Tr(/Omega1ρHQ
+♯
+HH )
+)
+s.t. log |I + 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯HH ¯/Omega1
+1
+2
+ρ |≥ R,
+0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I, ¯/Omega1ρ = I − /Omega1ρ, (32)
+Since /Psi1
+(
+Tr(/Omega1ρHQ
+♯
+HH )
+)
+is an increasing function of /Omega1ρ
+and all constraints in Problem (32) are convex sets, according
+to Lemma 1 and Lemma 2, Problem (32) has the same optimal
+solution with the following Problem (33),
+max
+/Omega1ρ
+Tr(/Omega1ρHQ
+♯
+HH )
+s.t. log |I + 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯HH ¯/Omega1
+1
+2
+ρ |≥ R,
+0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I, ¯/Omega1ρ = I − /Omega1ρ, (33)
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 9 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5155
+Lemma 6: By deﬁning W ≜ I + 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯HH ¯/Omega1
+1
+2
+ρ , Prob-
+lem (33) can be equivalently transformed into the following
+problem
+min
+W
+σ2Tr(W) − Tr(HQ♯HH ) − σ2Tr(I)
+s.t. log |W|≥ R, I⪯ RNT
++
+W⪯ RNT
++
+I + HQ♯HH , W ⪰ 0.
+(34)
+Proof: The proof of Lemma 6 can be found in
+Appendix C.
+Problem (34) is a convex optimization problem and can
+be solved by using some solution methods for convex opti-
+mization problems, such as interior point method [36]. Once
+the optimal W
+♯ is obtained, we can calculate /Omega1ρ as follows.
+Let wi be the i-th diagonal entry of matrix W♯ −I and di be the
+i-th diagonal entry of matrix HQ♯HH ,w h e r ei = 1,2,..., N.
+According to W ≜ I+ 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯ HH ¯/Omega1
+1
+2
+ρ , the entries of W are
+equal to the corresponding entries of I + (I − /Omega1ρ)
+1
+2 HQ♯HH
+(I −/Omega1ρ)
+1
+2 , which indicates that wi = (1 −ρi )∗di . Therefore,
+/Omega1♯
+ρ can be given by
+/Omega1♯
+ρ = diag(1 − w1
+d1
+,1 − w2
+d2
+,..., 1 − wN
+dN
+). (35)
+3) Jointly Optimal Q∗ and /Omega1∗
+ρ: Based on above calcula-
+tions, the jointly optimizing Q∗ and /Omega1∗
+ρ can be obtained by
+using Algorithm 3, where ϵ> 0 is the termination condition
+of Algorithm 3.
+Algorithm 3 Jointly Optimizing Q∗ and /Omega1∗
+ρ
+1: Initialization:
+Set /Omega1ρ =[ ε ε ... ε ];
+Set Epre = 1a n d Ecur = 0;
+2: Repeat:
+3: while |Ecur − Epre| >ϵ do
+4: Calculate Q♯ by solving Problem (31);
+5: Calculate W♯ by solving Problem (34);
+6: Update /Omega1ρ according to (35);
+7: Epre = Ecur;
+8: Update Ecur = /Psi1
+(
+Tr(/Omega1♯
+ρHQ♯HH )
+)
+;
+9: end while
+10: Return Q♯ and /Omega1♯
+ρ as the ﬁnal optimal solution.
+Convergence analysis : It is known that Tr (Q) represents
+the transmit power and Tr (/Omega1ρHQHH ) represents the received
+RF power. Higher transmit power leads to higher received
+RF power, so Tr (/Omega1ρHQHH ) increases with the increment
+of Tr (Q).F o rag i v e n /Omega1ρ, to maximize Tr (/Omega1ρHQHH ),
+Tr(Q) should be its maximum value P. In this case,
+if log |I + 1
+σ2 HρQHH
+ρ | > R, /Omega1ρ can be increased to improve
+Tr(/Omega1ρHQHH ). Until when log |I + 1
+σ2 HρQHH
+ρ |= R, /Omega1ρ
+cannot be increased any more, so does Tr (/Omega1ρHQHH ).T h e r e -
+fore, there exists a maximum Tr (/Omega1ρHQHH ). In Algorithm 3,
+for a given Q♯, /Omega1ρ is optimized to increase Tr (/Omega1ρHQHH ),
+which means that /Omega1ρ associated with current iteration is
+always increased over the proper cone RNT
++ compared with
+that associated with the previous iteration. Therefore, with a
+small positive value of ε, Algorithm 3 can converge to the
+optimal /Psi1
+(
+Tr(/Omega1ρHQ
+♯
+HH )
+)
+.
+Proposition 4: The R-E region of the MIMO broadcasting
+channel with PS receiver architecture under the nonlinear
+EH model is bounded by that under linear EH model with
+η = 1.
+Proof: Similar to the proof of Proposition 2, we have that
+E
+(nonlinear)
+max ≤ E(linear)
+max and R(nonlinear)
+max = R(linear)
+max .M o r e o v e r ,
+since Problem (32) has the same optimal solution with Prob-
+lem (33), combining it with Proposition 1, the optimal value
+of Problem (32) cannot be larger than that of Problem (33).
+Besides, from the solution method for Problem (31), it is
+also known that the optimal value of Problem (31) must be
+equal or smaller than that associated with the linear EH model.
+As a result, the optimal value of Problem P
+7 also must be
+equal or smaller that the optimization problem associated with
+the linear EH model, which means that the boundary curve
+associated with the nonlinear model from 0 to R
+max is bounded
+by that associated with the linear model with η = 1. Therefore,
+Proposition 4 is proved.
+V. N UMERICAL RESULTS AND DISCUSSION
+This section provides some numerical results to show the
+R-E region of the SWIPT MIMO broacasting channel with
+nonlinear EH model. In the simulations, the system bandwidth
+is set to be 1MHz. The receiver antenna noise power density
+is −100dBm/Hz. Path loss factor is assumed to be 4 and
+the available transmit power at the transmitter is 2Watt. For
+comparison, the R-E region of the SWIPT MIMO broacasting
+channel with traditional linear EH model is also simulated,
+where η is set to 1 and the R-E region of the linear EH model
+system is derived by solving the corresponding optimization
+problem in [7]. For our considered nonlinear EH model, two
+groups of circuit parameters, i.e., (a = 6400,b = 0.003) and
+(a = 1500,b = 0.0022) provided by [28], [37], [38], and [39],
+are adopted, and the R-E region of the nonlinear EH model
+system is calculated with our newly obtained theoretical results
+and the algorithms in this paper. In order to clearly show the
+difference performance of lin ear EH model and the nonlinear
+EH model, we illustrate the linear EH model and the nonlinear
+EH model as shown in Figure 2, where the harvested energy
+versus the input RF power is plotted. For the linear EH model,
+it is with η = 1 and for the nonlinear EH model, it is generated
+in terms of (2) with the parameters mentioned previously.
+These system conﬁgurations and parameter settings will not
+change unless otherwise speciﬁed.
+Note that M indicates the maximum harvested power at
+receiver when the EH circuit is saturated. In practical systems,
+the values of M are determined by EH circuits and may
+be much different due to circuit designs. In the simulations,
+we just want to show the effect trends of different values
+of M on system R-E regions rather than real values of M.
+As described in Proposition 1, the maximum harvested energy
+of nonlinear EH model is also bounded by that of the linear
+EH model, i.e., E
+max. Thus, when M > Emax, the maxi-
+mum harvested energy of nonlinear EH model is not larger
+than Emax. Therefore, we select Emax as a reference value of
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 10 ---
+5156 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+Fig. 2. Illustration of the linear EH model and the nonlinear EH model
+with different circuit parameters, w here two groups of circuit parameters,
+i.e., (a = 6400, b = 0.003) and (a = 1500, b = 0.0022) provided
+by [28], [37], [38], and [39], are adopted.
+maximum M, and select 0 .7Emax and 0 .3Emax to show the
+effect trends of different M on system performance.
+A. R-E Region of the Separated Receivers Scenario
+Firstly, we provide some results to show the R-E region
+of MIMO broadcasting channel with separated EH and ID
+receivers. In the simulations, the distances between the trans-
+mitter and the EH receiver and between the transmitter and
+the ID receiver were set to be 7m and 50m, respectively. The
+channels were generated following Rayleigh distribution.
+In Figure 3 and Figure 4, we provide two examples with
+speciﬁed channel matrices to show the R-E region of the
+MIMO channel with separated EH and ID receivers, where
+NT = NE = NI = 2 in Figure 3 and NT = NE = NI = 4
+in Figure 4. In Figure 3, HE =[ − 0.0583 + 0.5942i −
+0.3104 + 0.0708i;− 1.3669 − 0.6279i − 1.2690 − 0.3850i]
+and HI =[ 0.2146 + 1.2105i 0.3465 − 1.5120i;− 0.4245 −
+0.1373i 0.5228 − 0.5937i] and in Figure 4, HE and HI are
+respectively shown in (36) and (37), as shown at the bottom
+of this page. In both ﬁgures, M = Emax, M = 0.7Emax and
+M = 0.3Emax are considered, where Emax is obtained in terms
+of Emax = h(e)
+1 P, which is the maximum energy that can be
+harvested over the MIMO channel with the linear EH model.
+Fig. 3. Example 1: R-E region of MIMO broadcasting channel with separated
+receivers for speciﬁed HE and HI,w h e r eNT = NE = NI = 2.
+Fig. 4. Example 2: R-E region of MIMO broadcasting channel with separated
+receivers for speciﬁed HE and HI,w h e r eNT = NE = NI = 4.
+It can be observed that for the same (a,b)-pair conﬁguration,
+the larger the value of M, the larger the R-E region. The reason
+is that a larger M may bring a higher maximum power (when
+the EH circuit is saturated) that can be harvested at the
+EH receiver. Moreover, for the same M, the R-E regions asso-
+ciated with different pairs of (a,b) show very different bound-
+ary shapes. Speciﬁcally, with the increment of R, the maximal
+harvested energy of the system with (a = 6400,b = 0.003)
+HE =
+⎡
+⎢⎢⎣
+0.1907 − 0.2069i −0.3161 − 0.3486i 0.8921 + 0.4323i −0.4644 + 1.2760i
+0.3495 − 0.3824i 0.0775 − 0.1278i 0.3362 + 0.0773i −1.0475 − 0.5113i
+−1.0487 − 0.2182i 0.7981 + 0.0324i 0.8302 + 1.2827i 0.1099 + 0.3723i
+−0.7214 − 0.7754i −0.2050 − 0.0451i 0.0898 + 0.2206i 0.5788 − 0.1840i
+⎤
+⎥⎥⎦ (36)
+HI =
+⎡
+⎢⎢⎣
+0.4244 − 0.3006i −1.0190 − 0.6945i 0.5744 − 0.4429i −0.5317 − 0.4531i
+0.4200 + 0.4168i 0.2841 + 0.4331i 0.3858 + 0.1764i 1.0722 + 1.2791i
+−1.5458 − 0.0444i 1.0396 − 0.0388i −0.7436 − 0.7022i −0.0230 − 0.7636i
+−0.9384 − 1.4297i −0.2311 − 0.7911i 0.2811 + 0.6894i 1.1568 + 0.1408i
+⎤
+⎥⎥⎦ (37)
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 11 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5157
+Fig. 5. Average R-E region of MIMO br oadcasting channel with separated
+receivers, where NT = NE = NI = 2.
+declines much faster than that of the system with (a =
+1500,b = 0.0022), but the maximal harvested energy of the
+system with (a = 6400,b = 0.003) decreases later than
+that of the system with (a = 1500,b = 0.0022). Besides,
+the declining rate of the system with (a = 6400,b = 0.003)
+ﬁrst increases and then decreas es while that of the system with
+(a = 6400,b = 0.003) gradually increases. The reason is that
+different values of (a,b) yield very different EH behaviors,
+as shown in Figure 2 of [28]. For the EH circuit with (a =
+6400,b = 0.003), the increasing rate of the harvested power
+decreases with the increment of the input RF power, but for the
+EH circuit with (a = 1500,b = 0.0022), the increasing rate
+of the harvested power ﬁrst increases and then decreases with
+the increment of the input RF power. Additionally, it is also
+observed that the R-E regions associated with the nonlinear
+EH model are covered by the regions associated with the linear
+EH model, 4 which is consistent with Proposition 2. Particu-
+larly, in Figure 4, a part of the boundary of the R-E region
+associated with M = Emax,a = 1500,b = 0.0022 overlaps
+that of the traditional linear EH model, which implies that
+with some proper circuit parameters and certain channel gains,
+the R-E region obtained with the traditional linear EH model
+may be achievable in practical non-linear systems.
+In Figure 5 and Figure 6, the average R-E regions of
+the MIMO broadcasting channel with separated EH and ID
+receivers are plotted for N
+T = NE = NI = 2a n d NT =
+NE = NI = 4, respectively. Every point on the boundary of
+the R-E region was averaged over 100 channel realizations.
+From the two ﬁgures, the average R-E region associated with
+(a = 6400,b = 0.003) is always a subset of the corresponding
+one associated with (a = 1500,b = 0.0022), which means
+the circuit with parameters (a = 1500,b = 0.0022) has
+better average system performance than that of the circuit with
+parameters (a = 6400,b = 0.003). Moreover, the average
+4This does not means that the linear EH model is superior to the nonlinear
+EH model, as the the R-E region obtained with the EH model actually may
+not always be achievable in practical systems due to the nonlinear EH circuit
+features.
+Fig. 6. Average R-E region of MIMO br oadcasting channel with separated
+receivers, where NT = NE = NI = 4.
+Fig. 7. An example of the R-E region of MIMO broadcasting channel for a
+speciﬁed H with TS receiver architecture.
+R-E region associated with the 4 × 4 × 4-antenna system is
+larger than that associated with the 2 × 2 × 2-antenna system,
+which means that by equipping more antennas in SWIPT
+systems, a larger R-E region can be achieved.
+B. R-E Region of Co-Located Receivers Scenario
+Secondly, we provide some results to show the R-E region
+of MIMO broadcasting channel with co-located EH and ID
+receivers. In the simulations, the distances between the trans-
+mitter and the receiver was set to be 8m. The channels were
+also generated following Rayleigh distribution.
+In Figure 7, we present an example of the R-E region
+of a 2 × 2 MIMO broadcasting channel with TS receiver
+architecture, where H =[ − 0.1241 + 0.6715i 1.4090 +
+0.7172i; 1.4897 − 1.2075i 1.4172 + 1.6302i]. In (22), P
+peak
+is not conﬁned, which means that Ppeak in (22) is allowed
+to be +inf. In this case, the obtained R-E region can
+be considered as an outer bound but it may not always
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 12 ---
+5158 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+Fig. 8. An example of the R-E region of MIMO broadcasting channel for a
+speciﬁed H with PS receiver architecture.
+be practical. Thus, we also simulate the R-E region of the TS
+system with the peak power constraint, i.e., Ppeak ≤ 1.5P.
+In Figure 7, for the same M, the systems with different
+pairs of (a,b) have different R-E regions. The system with
+(a = 6400,b = 0.003) has a larger R-E region than that
+with (a = 1500,b = 0.0022). Moreover, the smaller M
+results in a smaller R-E region, which means that in the
+co-located receivers system with TS receiver architecture, both
+M and (a,b) affect the system R-E tradeoff greatly. Besides,
+the R-E region of the system with nonlinear EH model under
+the peak power constraint of Ppeak ≤ 1.5P is very close to that
+under Ppeak ≤+ inf. It is also observed that the R-E region of
+the TS system under nonlinear EH model is bounded within
+that of the TS system under traditional linear EH model, which
+is consistent with Proposition 3. With the same channel and
+system conﬁguration, Figure 8 plot the R-E region of the 2 ×2
+MIMO broadcasting channel with PS receiver architecture.
+The system with uniformed ρ where ρ1 = ρ2 =···= ρN
+was also simulated for comparison. As expected, the system
+with uniformed ρ achieves smaller R-E region compared with
+the system with ﬂexible ρ, but the R-E region shape does not
+change obviously. Moreover, the maximum harvested energy
+associated with the system with uniformed ρ is obviously
+lower than that of the system with ﬂexible ρ at the relatively
+high R regime. It is also observed that the R-E region of the
+PS system under nonlinear EH model is bounded within that
+of the PS system under traditional linear EH model, which is
+consistent with Proposition 4.
+Figure 9 compares the R-E regions of the 2 × 2M I M O
+broadcasting channel with PS and TS receiver architectures
+under the nonlinear EH model, where the channel matrix H
+is the same with that of Figure 7. It is observed that for the
+same system parameters, the TS system shows very different
+R-E tradeoff behaviour from PS system. That is, with the
+increment of R, the maximum harvested energy gradually
+decreases in the TS system while the maximum harvested
+energy keeps stable at ﬁrst and then sharply decreases in the
+PS system. For a relatively small R, the maximum harvested
+Fig. 9. Comparison of R-E region of MIMO broadcasting channel with a
+speciﬁed H for TS and PS receivers.
+Fig. 10. Average R-E region of MIMO broadcasting channel with co-located
+TS and PS receivers, where N = 2.
+energy of the PS system is higher than that of the TS system,
+but for a relatively large R, the maximum harvested energy
+of the PS system is lower than that of the TS system.
+In Figure 10, the average R-E regions of the MIMO broad-
+casting channel with colocated EH and ID receivers are plotted
+for NT = NE = NI = 2. Both TS and PS receiver architectures
+are simulated. Each point on the boundary of the R-E region
+is obtained by averaging 100 randomly generated channel
+realizations. It can be observed that the PS system has very
+different system performance compared with the TS system.
+For the same M, the PS system with (a = 1500,b = 0.0022)
+achieves larger R-E region than that with (a = 6400,b =
+0.003), but the TS system with (a = 1500,b = 0.0022)
+achieves smaller R-E region than that with (a = 6400,b =
+0.003). Moreover, for the PS system, with the increment of
+R the maximum harvested energy ﬁrst decrease very slowly
+and then decreases more and more sharply, while for the
+TS system, with the increment of R the maximum harvested
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 13 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5159
+energy decreases almost with th e same rate. Besides, with the
+same system parameter conﬁguration, the R-E region of the
+PS system is almost always larger than that of the TS system,
+which means PS system is able to achieve better average R-E
+tradeoff for MIMO broadcasting channel.
+From the simulation results in this section, we obtain the
+following results. 1) The variation of M greatly affects the size
+of the R-E region of the MIMO broadcasting channel with
+nonlinear EH model. 2) The parameters a and b determine
+the shape of R-E region of the MIMO broadcasting channel
+with nonlinear EH model. 3) The R-E region of the nonlinear
+EH model system is bounded by that of linear EH model
+system with η = 1. Nevertheless, the R-E region yielded
+by the nonlinear EH model is more reasonable, which is
+much closer to practice than that yielded by the linear EH
+ymodel. 4) Basically, with the same system parameters, the PS
+system always outperforms TS system under the nonlinear EH
+ymodel.
+VI. C
+ONCLUSION
+This paper studied the R-E region for MIMO broadcasting
+channel under the nonlinear EH ymodel. Two different scenar-
+ios were considered, i.e., th e separated EH and ID receivers
+scenario and the co-located EH yand ID receivers scenario. For
+the latter scenario, two practical receiver architectures, i.e., TS
+and PS receiver architectures were investigated. By consid-
+ering such a typical MIMO broadcasting system, several
+optimization problems were formulated to derive the boundary
+of the R-E region for the considered systems. As the problems
+were non-convex, we derived some semi-closed-form solutions
+and then designed efﬁcient algorithms to solve them. Numer-
+ical results were provided to show the R-E regions of the
+systems, which provide some interesting insights. It is shown
+that all practical circuit speciﬁ cations greatly affect the system
+R-E region. Compared with the systems under current linear
+EH model, the ones under the practical nonlinear EH model
+achieve smaller R-E regions and show different R-E tradeoff
+behaviors. With the increment of R, the average maximum
+harvested energy in the separated EH and ID receivers system
+and in the PS system decreases with an increasing declining
+rate, but decreases with an almost constant declining rate in
+the PS system. Besides, the PS system achieves larger average
+R-E region than the TS one. These results may provide some
+useful insights for better understanding the multi-antenna
+SWIPT system with nonlinear EH model. In this work, only
+one ID and EH receivers were considered. In our future
+work, we shall investigate the system with more ID and
+EH receivers.
+A
+PPENDIX A
+THE PROOF OF LEMMA 4
+For a given μ and ν, (16) can be equivalently re-expressed
+by
+max
+Q⪰ 0
+Tr
+(
+(HH
+E HE − νI)Q
+)
++ μ log | I + 1
+σ2
+I
+HIQHH
+I | (38)
+Let Q = ζv(1)
+E (v(1)
+E )H ,w h e r eζ is a positive constant. Substi-
+tuting Q = ζv(1)
+E (v(1)
+E )H into the objective function of (38),
+we have that
+Tr
+(
+(HH
+E HE − νI)Q
+)
++ μ log | I + 1
+σ2
+I
+HIQHH
+I |
+= Tr((HH
+E HEζv(1)
+E (v(1)
+E )H ) − Tr(νIζv(1)
+E (v(1)
+E )H )
++ μ log | I + 1
+σ2
+I
+∥ HIv(1)
+E ∥2|
+= ζTr((v(1)
+E )H HH
+E HEv(1)
+E ) − νζ Tr((v(1)
+E )H Iv(1)
+E )
++ μ log | I + ζ
+σ2
+I
+∥ HIv(1)
+E ∥2|
+= ζλ1 − νζ + μ log | I + ζ
+σ2
+I
+∥ HIv(1)
+E ∥2|= ζ(λ1 − ν)
++ μ log | I + ζ
+σ2
+I
+∥ HIv(1)
+E ∥2| . (39)
+For given μ and ν, it can be seen that if ν ≤ λ1,w h e n
+ζ →∞ , ζ(λ1 − ν) + μ log | I + ζ
+σ2
+I
+∥ HIv(1)
+E ∥2| will
+be unbounded. That is, if ν<λ 1, the optimal value of
+Problem (38) will be inﬁnity, which is a non-reasonable result.
+Therefore, it must be satisﬁed that ν>λ 1.
+APPENDIX B
+THE PROOF OF THEOREM 1
+Deﬁne B ≜ νI−HH
+E HE. It follows that when ν>λ 1, B⪰ 0
+and B−1 exists. Then Problem (38) can be re-written to be
+max
+Q⪰ 0
+μ log | I + 1
+σ2
+I
+HIQHH
+I |− Tr (BQ)
+≡ max
+Q⪰ 0
+μ log | I + 1
+σ2
+I
+HIQHH
+I |− Tr
+(
+B
+1
+2 B
+1
+2 Q
+)
+(40)
+Let F = B
+1
+2 QB
+1
+2 .S o , Q = B−1
+2 FB−1
+2 . Then (40) is further
+expressed by
+maxF⪰ 0 μ log | I + 1
+σ2 HIB−1
+2 FB−1
+2 HH
+I |− Tr (F) (41)
+Let f (F) = μ log | I+ 1
+σ2 HIB−1
+2 FB−1
+2 HH
+I |− Tr (F). It can be
+seen that f (F) is a concave function w.r.t. F, so its maximum
+value is achieved at the stationary point, i.e., ∂f (F)
+∂F
+⏐⏐⏐
+F=F∗ = 0.
+Thus, F∗ can be obtained by letting ∂f (F)
+∂F = 0.
+Let Z be a matrix satisfying that 1
+σ2
+I
+HIB−1
+2 ZB−1
+2 HH
+I = I.
+It can be obtained that
+f (F) = μ log | 1
+σ2
+I
+HIB−1
+2 (Z + F)B−1
+2 HH
+I |− Tr (F)
+= μ
+σ2NI
+I
+(
+log |HIB−1
+2 |+ log |(Z + F)|+ log |B−1
+2 HH
+I |
+)
+− Tr (F) .
+With ∂f (F)
+∂F = μ
+σ2NI
+I
+1
+(F+Z) ln 2 − I = 0, we get that
+F∗ = μ
+σ2NI
+I ln 2
+I − Z. (42)
+By performing SVD on matrix HIB−1
+2 ,w eh a v e HIB−1
+2 =
+ˆU/Lambda1HIB ˆV
+H
+,w h e r e/Lambda1HIB = diag(√
+λ1,√
+λ2,
+.... √
+ λmin{NT,NI}) with λ1 ≥ λ2 ≥ ... ≥ λmin{NT ,NI} ≥
+0. Thus, Z = ˆV(/Lambda1HIB)−1 ˆU
+H ˆU(/Lambda1HIB)−1 ˆV
+H
+= ˆV/Lambda1Z ˆV
+H
+with /Lambda1Z = /Lambda12
+HIB = diag
+(
+1
+λ1 , 1
+λ2 ,.... 1
+λmin{NT ,NI}
+)
+.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 14 ---
+5160 IEEE TRANSACTIONS ON WIRELESS COMM UNICATIONS, VOL. 16, NO. 8, AUGUST 2017
+Moreover, as ˆV ˆV
+H
+= ˆI, (42) can be expressed by F∗ =
+ˆV/Lambda1F ˆV
+H
+, where /Lambda1F = μ
+σ2NI
+I ln 2
+I − /Lambda1Z, i.e.,
+/Lambda1F = diag
+((
+μ
+σ2NI
+I ln 2
+− 1
+λ1
+)+
+,
+(
+μ
+σ2NI
+I ln 2
+− 1
+λ2
+)+
+,...,
+(
+μ
+σ2NI
+I ln 2
+− 1
+λmin{NT,NI }
+)+ )
+.
+(43)
+As a result, for given μ and ν, the optimal Q♯ can be given by
+Q♯ = B−1
+2 ˆV/Lambda1F ˆV
+H
+B−1
+2 , where μ in (19) should be selected
+to meet the constraint Tr (Q∗) = P.
+APPENDIX C
+THE PROOF OF LEMMA 6
+Since Q♯ is a PSD matrix, both HQ♯HH and
+1
+σ2 ( ¯/Omega1
+1
+2
+ρ H)Q♯( ¯/Omega1
+1
+2
+ρ H)H are also PSD matrices. Thus,
+we may express HQ♯HH as HQ♯HH = DDT ,
+where D ∈ CNT×NT and express 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯HH ¯/Omega1
+1
+2
+ρ
+as 1
+σ2 ¯/Omega1
+1
+2
+ρ HQ♯HH ¯/Omega1
+1
+2
+ρ = 1
+σ ¯/Omega1
+1
+2
+ρ DDT ¯/Omega1
+1
+2
+ρ
+1
+σ = GGT .
+Therefore, G = 1
+σ ¯/Omega1
+1
+2
+ρ D = 1
+σ (I − /Omega1ρ)
+1
+2 D.A sa
+result, /Omega1ρ = I − σ2(GD−1)2.S o ,T r (/Omega1ρHQ♯HH ) =
+Tr((I − (GD−1)2)HQ♯HH ) = Tr((I − σ2(GD−1)2)DDT ) =
+Tr(DDT −σ2(GD−1)2DDT ) = Tr(DDT )−σ2Tr(GD−1GDT ).
+Moreover, as GD−1 = (I − /Omega1ρ)
+1
+2 , which is a diagonal
+matrix, it can be inferred that GD−1 = (GD−1)T . Thus,
+Tr(/Omega1ρHQ♯HH ) = Tr(DDT ) − σ2Tr((D−1)T GT GDT ) =
+Tr(DDT ) − σ2Tr(GGT ) = Tr(DDT ) − σ2Tr(I + GGT ) +
+σ2Tr(I), which is a linear function w.r.t. GGT . Thus,
+Problem (33) can be equivalently transformed into
+max
+G
+Tr(DDT ) − σ2Tr(I + GGT ) + σ2Tr(I)
+s.t. log |I + GGT |≥ R, G = 1
+σ (I − /Omega1ρ)
+1
+2 D,
+0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I. (44)
+Deﬁne W ≜ I + GGT . Therefore, W = I+
+(I − /Omega1ρ)
+1
+2 DDT (I − /Omega1ρ)
+1
+2 .A s 0⪯ RNT
++
+/Omega1ρ⪯ RNT
++
+I, it can be
+inferred that I⪯ RNT
++
+W⪯ RNT
++
+I + DDT . So, problem (44) can
+be further transformed into
+min
+W
+σ2Tr(W) − Tr(DDT ) − σ2Tr(I),
+s.t. log |W|≥ R, I⪯ RNT
++
+W⪯ RNT
++
+I + DDT . (45)
+REFERENCES
+[1] H. J. Visser and R. J. M. Vullers, “RF energy harvesting and transport
+for wireless sensor network applica tions: Principles and requirements,”
+Proc. IEEE, vol. 101, no. 6, pp. 1410–1423, Jun. 2013.
+[2] M.-L. Ku, W. Li, Y . Chen, and K. J. R. Liu, “Advances in energy
+harvesting communications: Past, present, and future challenges,” IEEE
+Commun. Surveys Tuts., vol. 18, no. 2, pp. 1384–1412, 2nd Quart., 2016.
+[3] S. Ulukus et al., “Energy harvesting wireless communications: A review
+of recent advances,” IEEE J. Sel. Areas Commun. , vol. 33, no. 3,
+pp. 360–381, Mar. 2015.
+[4] X. Lu, P. Wang, D. Niyato, D. I. Kim, and Z. Han, “Wireless networks
+with RF energy harvesting: A contemporary survey,” IEEE Commun.
+Surveys Tuts., vol. 17, no. 2, pp. 757–789, 2nd Quart., 2015.
+[5] L. R. Varshney, “Transporting information and energy simultaneously,”
+in Proc. IEEE ISIT , Jul. 2008, pp. 1612–1616.
+[6] P. Grover and A. Sahai, “Shannon meets Tesla: Wireless information
+and power transfer,” in Proc. IEEE ISIT , Jun. 2010, pp. 2363–2367.
+[7] R. Zhang and C. K. Ho, “MIMO broadcasting for simultaneous wire-
+less information and power transfer,” IEEE Trans. Wireless Commun. ,
+vol. 12, no. 5, pp. 1989–2001, May 2013.
+[8] I. Krikidis, S. Timotheou, S. Nikolaou, G. Zheng, D. W. K. Ng, and
+R. Schober, “Simultaneous wireless in formation and power transfer in
+modern communication systems,” IEEE Commun. Mag., vol. 52, no. 11,
+pp. 104–110, Nov. 2014.
+[9] I.-M. Kim and D. I. Kim, “Wireless information and power trans-
+fer: Rate-energy tradeof f for equi-probable arbitrary-shaped discrete
+inputs,” IEEE Trans. Wireless Commun., vol. 15, no. 6, pp. 4393–4407,
+Jun. 2016.
+[10] K. Xiong, C. Chen, G. Qu, P. Y . Fan, and K. B. Letaief, “Group
+cooperation with optimal resource a llocation in wireless powered com-
+munication networks,” IEEE Trans. Wireless Commun., to be published.
+[11] M. Zhang, Y . Liu, and R. Zhang, “Artiﬁcial noise aided secrecy infor-
+mation and power transfer in OFDMA systems,” IEEE Trans. Wireless
+Commun., vol. 15, no. 4, pp. 3085–3096, Apr. 2016.
+[12] Y . Liu, Z. G. Ding, M. Elkashlan, and H. V . Poor, “Cooperative
+non-orthogonal multiple access with simultaneous wireless information
+and power transfer,” IEEE J. Sel. Areas Commun. , vol. 34, no. 4,
+pp. 938–953, Apr. 2016.
+[13] R. Morsi, D. S. Michalopoulos, and R. Schober, “Multiuser scheduling
+schemes for simultaneous wireless in formation and power transfer over
+fading channels,” IEEE Trans. Wireless Commun. , vol. 14, no. 4,
+pp. 1967–1982, Apr. 2015.
+[14] X. Zhou, R. Zhang, and C. K. Ho, “Wireless information and power
+transfer: Architecture design and rate-energy trade-off,” IEEE Trans.
+Commun., vol. 61, no. 11, pp. 4754–4767, Nov. 2013.
+[15] H. Lee, S.-R. Lee, K.-J. Lee, H.-B. Kong, and I. Lee, “Optimal
+beamforming designs for wireless information and power transfer in
+MISO interference channels,” IEEE Trans. Wireless Commun. , vol. 14,
+no. 9, pp. 4810–4821, Sep. 2015.
+[16] H. Chen, Y . Li, Y . Jiang, Y . Ma, and B. Vucetic, “Distributed power
+splitting for SWIPT in relay interference channels using game theory,”
+IEEE Trans. Wireless Commun., vol. 14, no. 1, pp. 410–420, Jan. 2015.
+[17] Q. Li, Q. Zhang, and J. Qin, “Secure relay beamforming for simulta-
+neous wireless information and powe r transfer in nonregenerative relay
+networks,” IEEE Trans. Veh. Technol. , vol. 63, no. 5, pp. 2462–2467,
+Jun. 2014.
+[18] K. Xiong, P. Fan, C. Zhang, and K. B . Letaief, “Wireless information
+and energy transfer for two-hop non -regenerative MIMO-OFDM relay
+networks,” IEEE J. Sel. Areas Commun.
+, vol. 33, no. 8, pp. 1595–1611,
+Aug. 2015.
+I. Krikidis, S. Timotheou, S. Ni kolaou, G. Zheng, D. W. K. Ng, and
+R. Schober, “Simultaneous wireless in formation and power transfer in
+modern communication systems,” IEEE Commun. Mag., vol. 52, no. 11,
+pp. 104–110, Nov. 2014.
+[19] C.-F. Liu, M. Maso, S. Lakshminarayana, C.-H. Lee, and T. Q. S. Quek,
+“Simultaneous wireless informatio n and power transfer under different
+CSI acquisition schemes,”IEEE Trans. Wireless Commun., vol. 14, no. 4,
+pp. 1911–1926, Apr. 2015.
+[20] D. W. K. Ng, E. S. Lo, and R. Schober, “Wireless information and power
+transfer: Energy efﬁciency optimization in OFDMA systems,” IEEE
+Trans. Wireless Commun., vol. 12, no. 12, pp. 6352–6370, Dec. 2013.
+[21] D. W. K. Ng, E. S. Lo, and R. Schober, “Robust beamforming for
+secure communication in systems with wireless information and power
+transfer,” IEEE Trans. Wireless Commun., vol. 13, no. 8, pp. 4599–4615,
+Aug. 2014.
+[22] Q. Shi, W. Xu, J. Wu, E. Song, and Y . Wang, “Secure beamforming
+for MIMO broadcasting with wireless information and power trans-
+fer,” IEEE Trans. Wireless Commun. , vol. 14, no. 5, pp. 2841–2853,
+May 2015.
+[23] X. F. Di, K. Xiong, P. Y . Fan, an d H.-C. Yang, “Simultaneous wire-
+less information and power trans fer in cooperative relay networks
+with rateless codes,” IEEE Trans. Veh. Technol. , vol. 66, no. 4,
+pp. 2981–2996, Apr. 2017.
+[24] S. Bi, C. K. Ho, and R. Zhang, “Wireless powered communication:
+Opportunities and challenges,” IEEE Commun. Mag. , vol. 53, no. 4,
+pp. 117–125, Apr. 2015.
+[25] J. Xu, L. Liu, and R. Zhang, “Multiuser MISO beamforming for
+simultaneous wireless inform ation and power transfer,” IEEE Trans.
+Signal Process., vol. 62, no. 18, pp. 4798–4810, Sep. 2014.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 15 ---
+XIONG et al.: RATE-ENERGY REGION OF SWIPT FOR MIMO BROADCASTING UNDER NONLINEAR EH MODEL 5161
+[26] Q. Shi, L. Liu, W. Xu, and R. Zhang, “Joint transmit beamforming
+and receive power splitting for MISO SWIPT systems,” IEEE Trans.
+Wireless Commun., vol. 13, no. 6, pp. 3269–3280, Jun. 2014.
+[27] S. Luo, J. Xu, T. J. Lim, and R. Zhang, “Capacity region of MISO
+broadcast channel for simultaneous wireless information and power
+transfer,” IEEE Trans. Commun. , vol. 62, no. 10, pp. 3856–3868,
+Oct. 2015.
+[28] E. Boshkovska, D. W. K. Ng, N. Zlatanov, and R. Schober, “Prac-
+tical non-linear energy harvesting model and resource allocation for
+SWIPT systems,” IEEE Commun. Lett., vol. 19, no. 12, pp. 2082–2085,
+Dec. 2015.
+[29] E. Boshkovska, R. Morsi, D. W. K. Ng, and R. Schober, “Power
+allocation and scheduling for SW IPT systems with non-linear energy
+harvesting model,” in Proc. IEEE ICC , May 2016, pp. 1–6.
+[30] E. Boshkovska, D. W. K. Ng, N. Zlatanov, and R. Schober, “Robust
+beamforming for SWIPT systems with non-linear energy harvesting
+model,” in Proc. 17th Int. Workshop Signal Process. Adv. Wireless
+Commun. (SPAWC), Jul. 2016, pp. 1–5.
+[31] S. Y . Leng, D. W. K. Ng, N. Zlatanov, and R. Schober, “Multi-objective
+beamforming for energy-efﬁcient SWIPT systems,” in Proc. IEEE ICNC,
+Feb. 2016, pp. 1–7.
+[32] Y . J. Dong, M. J. Hossain, and J. L. Chen, “Performance of wireless
+powered amplify and forward relaying over Nakagami- m fading chan-
+nels with nonlinear energy harvester,” IEEE Commun. Lett. , vol. 20,
+no. 4, pp. 672–675, Apr. 2016.
+[33] J. L. Zhang and G. F. Pan, “Outage ana lysis of wireless-powered relaying
+MIMO systems with non-linear energy harvesters and imperfect CSI,”
+IEEE Access, vol. 4, pp. 7046–7053, 2016.
+[34] E. Boshkovska, D. W. K. Ng, N. Zla tanov, A. Koelpin, and R. Schober,
+“Robust resource allocation for MIMO wireless powered communication
+networks based on a non-linear EH model,” IEEE Trans. Commun. ,
+vol. 65, no. 5, pp. 1984–1999, May 2017.
+[35] T. M. Cover and J. A. Thomas, Elements of Information Theory .
+New York, NY , USA: Wiley, 1991.
+[36] S. Boyd and L. Vandenbergh, Convex Optimization. Cambridge, U.K.:
+Cambridge Univ. Press, 2004.
+[37] E. Boshkovska, “Practical nonlinear energy harvesting model and
+resource allocation in SWIPT systems,” M.S. thesis, 2016. [Online].
+Available: http://arxiv.org/abs/1602.00833
+[38] T. Le, K. Mayaram, and T. Fiez, “Efﬁcient far-ﬁeld radio fre-
+quency energy harvesting for passively powered sensor networks,”
+IEEE J. Solid-State Circuits , vol. 43, no. 5, pp. 1287–1302, May 2008.
+[39] J. Guo and X. Zhu, “An improved analytical model for RF-DC con-
+version efﬁciency in microwave rectiﬁers,” in IEEE MTT-S Int. Microw.
+Symp. Dig., Jun. 2012, pp. 1–3.
+Ke Xiong (M’14) received the B.S. and Ph.D.
+degrees from Beijing Jiaotong University (BJTU),
+Beijing, China, in 2004 and 2010, respectively. From
+2010 to 2013, he was a Post-Doctoral Research
+Fellow with the Department of Electrical Engineer-
+ing, Tsinghua University, Beijing. From 2015 to
+2016, he was a Visiting Scholar with the University
+of Maryland, College Park MD, USA. Since 2013,
+he has been a Lecturer with BJTU, where he is
+currently an Associate Professor with the School
+of Computer and Information Technology. He has
+published over 60 academic papers in referred journals and conferences.
+His current research intere sts include wireless coopera tive networks, wireless
+powered networks, and network information theory. He is a member of China
+Computer Federation and also a senior member of the Chinese Institute of
+Electronics. He serves as an Associate Editor-in Chief of the Chinese journal
+New Industrialization Strategy , and an Editor of Computer Engineering and
+Software. In 2017, he serves as the Leading Editor of the Special issue Recent
+Advances in Wireless Powered Communication Networks for EURASIP
+Journal on Wireless Communications and Networking .H ea l s os e r v e sa s
+a Reviewer for over 15 internati onal journals, including IEEE T
+RANS -
+ACTIONS ON SIGNAL PROCESSING , IEEE T RANSACTIONS ON WIRELESS
+COMMUNICATIONS , IEEE T RANSACTIONS ON COMMUNICATIONS , IEEE
+TRANSACTIONS ON VEHICULAR TECHNOLOGY , IEEE C OMMUNICATION
+LETTERS , IEEE S IGNAL PROCESSING LETTERS , and IEEE W IRELESS
+COMMUNICATION LETTERS . He also served as the Session Chair of the
+IEEE GLOBECOM2012, the IET ICWMMN2013, the IEEE ICC2013, the
+ACM MOMM2014, and the Publicity an d Publication Chair of the IEEE
+HMWC2014, as well as the TPC Co-Chair of the IET ICWMMN2017.
+Beibei Wang (SM’15) received the B.S. degree
+(Hons.) in electrical engineering from the University
+of Science and Technology of China, Hefei, in 2004,
+and the Ph.D. degree in electrical engineering from
+the University of Maryland at College Park , College
+Park, MD, USA, in 2009. She was with the Uni-
+versity of Maryland as a Research Associate from
+2009 to 2010, and with Qualcomm Research and
+Development from 2010 to 2014. Since 2015, she
+has been with Origin Wireless Inc. as a Principal
+Technologist. She has coauthored the bookCognitive
+Radio Networking and Security: A Game-Theoretic View (Cambridge Uni-
+versity Press, 2010). Her research intere sts include wireless communications
+and signal processing. She received the Graduate School Fellowship, the
+Future Faculty Fellowship, and the Deans Doctoral Research Award from
+the University of Maryland, and the Overview Paper Award from the IEEE
+Signal Processing Society in 2015.
+K. J. Ray Liu (F’03) was a Distinguished Scholar-
+Teacher with the University of Maryland, College
+Park, MD, USA, in 2007, where he is currently
+the Christine Kim Eminent Professor of Information
+Technology and leads the Maryland Signals and
+Information Group conducting research encompass-
+ing broad areas of information and communications
+technology with recent focus on smart radios for
+smart life.
+Dr. Liu is a fellow of AAAS. He was a recipient
+of the 2016 IEEE Leon K. Kirchmayer Technical
+Field Award on graduate teaching and mentoring, the IEEE Signal Processing
+Society 2014 Society Award, and th e IEEE Signal Processing Society 2009
+Technical Achievement Award. He is recognized by Thomson Reuters as a
+Highly Cited Researcher. He is a member of the IEEE Board of Directors. He
+was a President of the IEEE Signal Processing Society, where he has served
+as a Vice President C Publications and Board of Governor. He has also served
+as the Editor-in-Chief of IEEE Signal Processing Magazine .
+He also received teaching and resear ch recognitions from the University
+of Maryland, including the university-level Invention of the Year Award, the
+college-level Poole and Kent Senior Faculty Teaching Award, the Outstanding
+Faculty Research Award, and the Outstanding Faculty Service Award, all from
+the A. James Clark School of Engineering.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on October 31,2025 at 07:15:33 UTC from IEEE Xplore.  Restrictions apply. 

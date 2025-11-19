@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from multiprocessing import Pool
 from tqdm import tqdm
-from mimo_optimized import MIMOSystem
+from core.mimo_core import MIMOSystem
 
 def run_single_simulation(args):
     """

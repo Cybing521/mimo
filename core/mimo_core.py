@@ -1,6 +1,15 @@
 """
-MIMO System Class Definition
-包含MIMO系统的所有核心算法和优化逻辑
+MIMO Core Algorithm Library - Ma et al. (2023)
+================================================================
+Paper: "MIMO Capacity Characterization for Movable Antenna Systems"
+Author: Wenyan Ma, Lipeng Zhu, Rui Zhang
+Journal: IEEE Transactions on Wireless Communications, 2023
+
+本模块实现了论文中的核心算法：
+- MIMOSystem: 可移动天线 MIMO 系统的完整建模
+- Algorithm 2: 交替优化算法（Proposed 方案）
+- 支持多种基准模式：RMA, TMA, FPA
+================================================================
 """
 
 import numpy as np
@@ -10,6 +19,7 @@ import warnings
 
 # 忽略不必要的警告
 warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 class MIMOSystem:
     def __init__(self, N=4, M=4, Lt=10, Lr=15, SNR_dB=15, lambda_val=1):

@@ -1,4 +1,5 @@
 import os
+import sys
 from pypdf import PdfReader
 
 def extract_text_from_pdf(pdf_path, output_txt_path):
@@ -25,7 +26,13 @@ def extract_text_from_pdf(pdf_path, output_txt_path):
         print(f"Error extracting text: {e}")
 
 if __name__ == "__main__":
-    pdf_file = "papers/Ma 等 - 2023 - MIMO Capacity Characterization for Movable Antenna-已解锁.pdf"
-    output_file = "papers/ma_2023_extracted.txt"
-    extract_text_from_pdf(pdf_file, output_file)
+    if len(sys.argv) > 2:
+        pdf_file = sys.argv[1]
+        output_file = sys.argv[2]
+    else:
+        # Default fallback
+        pdf_file = "papers/Ma 等 - 2023 - MIMO Capacity Characterization for Movable Antenna-已解锁.pdf"
+        output_file = "papers/ma_2023_extracted.txt"
+        print("Using default paths. Usage: python extract_pdf.py <pdf_path> <output_path>")
 
+    extract_text_from_pdf(pdf_file, output_file)
