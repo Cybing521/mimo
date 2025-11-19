@@ -1,1 +1,0 @@
-Successfully extracted text to papers/ma_2023_extracted.txt
