@@ -30,7 +30,7 @@ pip install -r requirements.txt
 
 ### 2. 运行仿真
 
-本项目使用 `universal_simulation.py` 通用脚本来复现论文中的所有图表，支持自定义扫描参数。
+本项目使用 `universal_simulation.py` 通用脚本来复现论文中的所有图表，支持自定义扫描参数。详细的实验参数说明请参考 [Experiment Parameters](docs/experiment_parameters.md)。
 
 #### 基本用法
 ```bash
@@ -109,7 +109,12 @@ python universal_simulation.py --sweep_param A --range 1 5 1 --SNR 25 --Lt 10 --
 - `universal_simulation.py`: **核心仿真脚本**。集成了所有功能的通用仿真入口。
 
 **核心模块**:
-- `mimo_optimized.py`: **核心算法实现** (MIMOSystem 类)。
+- `mimo_optimized.py`: **核心算法实现** (MIMOSystem 类)。包含所有系统建模、信道生成和优化算法逻辑。此文件为`universal_simulation.py`提供底层支持，不可删除。
+
+**文档**:
+- `docs/`: 包含详细的参数说明和图表总结。
+    - `experiment_parameters.md`: 实验参数详细配置。
+    - `figures_summary.md`: 论文图表复现说明。
 
 **其他**:
 - `requirements.txt`: 项目依赖。
