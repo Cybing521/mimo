@@ -15,12 +15,14 @@ from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 from mimo_optimized import MIMOSystem
 
+import argparse
+
 def run_simulation_mode(args):
     """运行指定模式的单次试验"""
-    trial, A_lambda, SNR_dB, mode = args
+    trial, A_lambda, SNR_dB, mode, Lt, Lr = args
     
     # 初始化系统 (使用论文标准参数)
-    mimo = MIMOSystem(N=4, M=4, Lt=10, Lr=15, SNR_dB=SNR_dB, lambda_val=1)
+    mimo = MIMOSystem(N=4, M=4, Lt=Lt, Lr=Lr, SNR_dB=SNR_dB, lambda_val=1)
     
     try:
         # 运行优化
@@ -30,16 +32,34 @@ def run_simulation_mode(args):
         return 0.0
 
 def main():
+    parser = argparse.ArgumentParser(description='MIMO Antenna Position Optimization Simulation')
+    parser.add_argument('--snr', type=float, default=25, help='Signal-to-Noise Ratio (dB)')
+    parser.add_argument('--trials', type=int, default=50, help='Number of Monte Carlo trials')
+    parser.add_argument('--cores', type=int, default=None, help='Number of CPU cores to use (default: max available)')
+    args = parser.parse_args()
+
     print(f"\n{'='*70}")
     print(f"MIMO多模式对比仿真 (Proposed vs RMA vs TMA vs FPA)")
     print(f"{'='*70}")
     
     # 参数设置
-    A_lambda_values = np.arange(1, 5, 0.5)  # 1.0 到 4.5
-    num_trials = int(sys.argv[1]) if len(sys.argv) > 1 else 50
-    num_cores = min(8, cpu_count())
-    SNR_dB = 25  # 修改为25dB以复现论文Fig. 6 (High SNR)
-    SNR_dB
+    num_trials = args.trials
+    # 如果用户没有指定 cores，则使用默认逻辑（最多8核）
+    num_cores = args.cores if args.cores is not None else min(8, cpu_count())
+    SNR_dB = args.snr
+
+    # 根据 SNR 自动调整扫描范围 (复现论文逻辑)
+    # Low-SNR 通常扫描范围较小 (1-3)，High-SNR 扫描范围较大 (1-4)
+    if SNR_dB < 0:
+        A_lambda_values = np.arange(1, 3.1, 0.5)
+        print(f"Configuration: Low-SNR Regime (SNR={SNR_dB}dB)")
+    else:
+        A_lambda_values = np.arange(1, 4.1, 0.5)
+        print(f"Configuration: High-SNR Regime (SNR={SNR_dB}dB)")
+    
+    # 固定散射体参数 (论文标准)
+    Lt, Lr = 5, 5
+    print(f"Parameters: A/λ in {A_lambda_values}, Lt={Lt}, Lr={Lr}, Trials={num_trials}, Cores={num_cores}")
 
     modes = ['Proposed', 'RMA', 'TMA', 'FPA']
     results = {mode: [] for mode in modes}
@@ -50,7 +70,7 @@ def main():
         mode_capacities = []
         
         for A_lambda in A_lambda_values:
-            args_list = [(t, A_lambda, SNR_dB, mode) for t in range(num_trials)]
+            args_list = [(t, A_lambda, SNR_dB, mode, Lt, Lr) for t in range(num_trials)]
             
             with Pool(processes=num_cores) as pool:
                 capacities = list(tqdm(

@@ -1,0 +1,2472 @@
+Metadata: {'/IEEE Article ID': '10243545', '/Trapped': 'False', '/IEEE Issue ID': '4656680', '/PTEX.Fullbanner': 'This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021/W32TeX) kpathsea version 6.3.3', '/IEEE Publication ID': '7693', '/Title': 'MIMO Capacity Characterization for Movable Antenna Systems', '/Author': 'Wenyan Ma', '/Subject': 'IEEE Transactions on Wireless Communications; ;PP;99;10.1109/TWC.2023.3307696', '/Creator': 'LaTeX with hyperref', '/CreationDate': "D:20230819134626+08'00", '/ModDate': 'D:20251119073525Z', '/Producer': 'Pdftools SDK'}
+--- Page 1 ---
+1
+MIMO Capacity Characterization for Movable
+Antenna Systems
+Wenyan Ma, Student Member, IEEE, Lipeng Zhu, Member, IEEE, and Rui Zhang, Fellow, IEEE
+Abstract—In this paper, we propose a new multiple-input
+multiple-output (MIMO) communication system with movable
+antennas (MAs) to exploit the antenna position optimization
+for enhancing the capacity. Different from conventional MIMO
+systems with ﬁxed-position antennas (FPAs), the proposed system
+can ﬂexibly change the positions of transmit/receive MAs, such
+that the MIMO channel between them is reconﬁgured to achieve
+higher capacity. We aim to characterize the capacity of MA-
+enabled point-to-point MIMO communication systems, by jointly
+optimizing the positions of transmit and receive MAs as well as
+the covariance of transmit signals. First, we develop an efﬁcient
+alternating optimization algorithm to ﬁnd a locally optimal
+solution by iteratively optimizing the transmit covariance matrix
+and the position of each transmit/receive MA with the other
+variables being ﬁxed. Next, we propose alternative algorithms
+of lower complexity for capacity maximization in the low-SNR
+regime and for the multiple-input single-output (MISO) and
+single-input multiple-output (SIMO) cases. Numerical results
+show that our proposed MA systems signiﬁcantly improve the
+MIMO channel capacity compared to traditional FPA systems
+as well as various benchmark schemes, and useful insights are
+drawn into the capacity gains of MA systems.
+Index Terms —Capacity, multiple-input multiple-output
+(MIMO), movable antenna (MA), alternating optimization.
+I. I NTRODUCTION
+The proliferation of wireless applications, including
+high-quality video streaming and augmented/virtual reality
+(AR/VR), has spurred the need for elevated capacity in next-
+generation wireless communication systems. To achieve this
+goal, multiple-input multiple-output (MIMO) and massive
+MIMO communications have been the key enabling technolo-
+gies [2], [3]. However, although MIMO/massive MIMO can
+enhance the wireless channel capacity and system spectral
+efﬁciency signiﬁcantly, they generally demand considerably
+higher hardware costs and energy consumption, due to the
+growing number of radio frequency (RF) chains and/or anten-
+nas required for wireless systems operating at higher frequency
+bands [4], [5].
+To reduce the number of RF chains, antenna selection (AS)
+is a practical solution for capturing a large portion of the
+This work is supported in part by Ministry of Education, Singapore under
+Award T2EP50120-0024, Advanced Research and Technology Innovation
+Centre (ARTIC) of National University of Singapore under Research Grant
+R-261-518-005-720, and The Guangdong Provincial Key Laboratory of Big
+Data Computing. An earlier version of this paper was presented in part at the
+IEEE International Conference on Communications (ICC), Rome, Italy, 2023
+[1]. The associate editor coordinating the review of this article and approving
+it for publication was M. Wang. (Corresponding author: Lipeng Zhu.)
+W. Ma and L. Zhu are with the Department of Electrical and Computer
+Engineering, National University of Singapore, Singapore 117583 (Email:
+wenyan@u.nus.edu, zhulp@nus.edu.sg).
+R. Zhang is with School of Science and Engineering, Shenzhen Research
+Institute of Big Data, The Chinese University of Hong Kong, Shenzhen,
+Guangdong 518172, China (e-mail: rzhang@cuhk.edu.cn). He is also with
+the Department of Electrical and Computer Engineering, National University
+of Singapore, Singapore 117583 (e-mail: elezhang@nus.edu.sg).
+channel capacity in MIMO systems by properly selecting a
+small number of antennas with favorable channels from the a
+large candidate set [6], [7]. However, deploying more candi-
+date antennas requires higher hardware cost, and the overhead
+of channel estimation and the computational complexity of
+AS algorithms grow greatly with the total number of antennas
+[8]. To further exploit the array gain with a small number of
+RF chains, different antenna architectures have been proposed
+to maximize the achievable rate of communication systems
+by properly designing the analog/hybrid precoding/combining
+matrix [9]–[12]. By optimizing the diagonal power allocation
+matrix and analog precoding (AP) matrix at the transmitter
+as well as the analog combining matrix at the receiver, the
+channel capacity can be improved compared with that of AS
+systems for fading channels [9]. Moreover, the hybrid digital-
+analog precoding architecture was studied in [10]. By design-
+ing the hybrid precoding (HP) matrix based on instantaneous
+channel state information (CSI), the HP system outperforms
+the AP system and fully digital (FD) system in terms of energy
+efﬁciency. Furthermore, the multiuser interference channel was
+considered in [11], [12]. By controlling the on-off state of all
+phase shifters (PSs) and RF chains through a switch network,
+the energy efﬁciency of multiple users can be improved [11].
+Besides, the PS-antenna connection network and PSs were
+jointly designed to maximize the users’ average downlink
+achievable rate [12]. However, since the antennas are deployed
+at ﬁxed positions in conventional MIMO/massive MIMO
+with/without AS or HP, they cannot fully utilize the spatial
+variation of wireless channels in a given transmit/receive
+region, especially with a limited number of antennas.
+To improve the channel capacity under the ﬁxed array
+structure, the rotatable uniform linear array (RULA) was
+proposed by mechanically rotating the transmit/receive array
+to achieve better channel conditions [13], [14]. However,
+since the transmit/receive array can only be reconﬁgured by
+rotation, the spatial channel variation cannot be fully exploited.
+To further explore the degrees of freedom (DoFs) in the
+spatial domain for improving the communication performance,
+the ﬂuid antenna system (FAS) was proposed by changing
+the antenna position ﬂexibly over a one-dimensional (1D)
+line [15], [16]. By using conductive ﬂuids as materials for
+antennas, the position of a receive antenna can be switched
+freely among all candidate ports over a ﬁxed-length line, and
+thus the signal with the highest signal-to-noise ratio (SNR)
+can be received [15]. By setting the number of possible
+positions large enough, a single-antenna FAS can even achieve
+lower outage probability compared to multiple-antenna sys-
+tems with maximum ratio combining (MRC). Moreover, the
+ﬂuid antenna multiple access (FAMA) was studied in [16]
+to support multiple transceivers with a single ﬂuid antenna
+at each mobile user. By selecting the positions of the ﬂuid
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 2 ---
+2
+antennas at different users, the favorable channel condition
+with mitigated interference can be obtained, thereby achieving
+a signiﬁcant capacity gain. It was shown in [15], [16] that
+changing the positions of antennas can efﬁciently improve
+the wireless channel capacity. However, due to the limitations
+of liquid materials, the FAS can only support a single ﬂuid
+antenna moving over a 1D line, which limits its capability for
+fully exploiting the wireless channel variation in the spatial
+domain.
+To fully explore the ultimate capacity of MIMO systems,
+the concept of continuous-aperture MIMO (CAP-MIMO) was
+proposed [17], which is also called holographic MIMO [18],
+[19], large intelligent surface [20], or holographic surface [21],
+[22]. By deploying a large number of sub-wavelength radiation
+elements in a compact surface, CAP-MIMO can be regarded as
+a quasi-continuous electromagnetic surface with controllable
+current density. Although the recent advance in highly-ﬂexible
+programmable meta-materials has made the CAP-MIMO more
+practically implementable, some critical challenges still remain
+unsolved [18], such as the efﬁcient estimation of ultra high-
+dimensional CAP-MIMO channels and the efﬁcient current
+density optimization subject to a large number of practical
+constraints.
+To exploit more spatial DoFs for enhancing the channel
+capacity, we propose a new MIMO communication system en-
+abled by movable antennas (MAs). Speciﬁcally, by connecting
+the MAs to RF chains via ﬂexible cables, the positions of MAs
+can be adjusted by controllers in real time, such as stepper mo-
+tors or servos [23]–[25]. Different from conventional MIMO
+systems with ﬁxed-position antennas (FPAs), the proposed
+system can ﬂexibly change the positions of transmit/receive
+MAs, such that the MIMO channel matrix between them
+can be reshaped for achieving higher capacity. For MIMO
+systems, we can jointly optimize the positions of transmit
+and receive MAs for the channel capacity maximization. To
+achieve high channel capacity in MIMO systems, it is common
+to transmit multiple data streams simultaneously. To maximize
+the channel capacity, the positions of transmit and receive MAs
+must be optimized to balance the channel gains for each of
+the spatial data streams.
+Existing studies have validated the great potentials of MA-
+enabled wireless communications [1], [26]–[28]. In [26], the
+overview of the promising applications for MA-aided wireless
+communications was provided. It was shown that employing
+MAs can improve the communication performance in terms
+of signal power improvement, interference mitigation, ﬂexible
+beamforming, and spatial multiplexing. Besides, the ﬁeld-
+response-based channel model and MA architecture were
+proposed for the single-MA system in [27], where the SNR
+gain over its FPA counterpart was investigated under both
+deterministic and stochastic channels. In [1], an MA-enabled
+MIMO communication system was considered, where the
+receive MAs’ positioning and transmit covariance matrix
+were jointly optimized for maximizing the channel capacity.
+It was revealed that the optimization of the receive MAs’
+positions can reshape the MIMO channel matrix into a more
+favorable condition for capacity maximization. Moreover, the
+MA-enabled multiuser communication system was considered
+in [28], where the MAs’ positions of multiple users were
+jointly optimized to minimize the total transmit power, subject
+to the minimum achievable rate requirement of each user.
+It was revealed that the antenna position optimization can
+signiﬁcantly decrease the total transmit power of users as
+compared to conventional FPA systems. Note that the pro-
+posed MA-enabled communication system is different from
+conventional AS systems. On one hand, the AS systems can
+only deploy a ﬁnite number of antennas in discrete antenna
+ports, which cannot fully exploit the channel spatial variation
+over all locations near the Tx/Rx. In comparison, each MA can
+be ﬂexibly moved in a continuous region around the Tx/Rx
+and thus attain improved diversity/multiplexing performance.
+On the other hand, the performance of MA systems can
+be improved by simply enlarging the size of the region for
+antenna moving. However, for approaching the performance of
+MA systems, the AS systems need to deploy more antennas
+to cover the same region, which result in more substantial
+hardware cost. Although the AS algorithm can be applied
+for MA systems by quantizing the transmit/receive area into
+discrete locations and constraining each MA to move over
+them only, the computational complexity for exhaustively
+searching the antenna positions for MAs increases signiﬁcantly
+with the size of transmit/receive area, especially when the
+number of MAs increases. Thus, more efﬁcient MA position
+optimization algorithms should be investigated to reduce the
+computational complexity of exhaustive search.
+In this paper, we study the joint optimization of the transmit
+and receive MAs’ positions as well as the transmit signals’
+covariance matrix to maximize the capacity of the MA-enabled
+point-to-point MIMO system, with MAs equipped at both
+the transmitter and receiver. To characterize the fundamental
+capacity limit, we assume that perfect CSI is available at both
+the transmitter and receiver. The main contributions of this
+paper are summarized as follows:
+• Firstly, we derive the capacity maximization problem for
+the MA-enabled MIMO communication systems, which
+is non-convex and thus difﬁcult to be optimally solved.
+To tackle this problem efﬁciently, we propose an alter-
+nating optimization algorithm by iteratively optimizing
+the transmit covariance matrix and the position of each
+transmit/receive MAs with the other variables being ﬁxed.
+In particular, given the transmit covariance matrix, we
+leverage the convex relaxation technique to obtain a
+locally optimal solution for the transmit/receive MA-
+positioning optimization subproblem. It is shown that the
+proposed algorithm converges to a suboptimal solution at
+least.
+• Moreover, we investigate the MA-enabled MIMO channel
+capacity in the low-SNR regime, and propose an alter-
+native algorithm for solving the capacity maximization
+problem with lower complexity. In addition, we further
+simplify the proposed algorithm for the capacity max-
+imization in the special cases of multiple-input single-
+output (MISO) and single-input multiple-output (SIMO)
+channels with MAs.
+• Finally, we present sufﬁcient numerical results to demon-
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 3 ---
+3
+Digital 
+Signal 
+Processor 
+RF Chain 
+RF Chain ... 
+RF Chain 
+N
+RF Chains 
+... N
+Movable 
+Antennas 
+Transmit 
+Region 
+tx
+ty
+Digital 
+Signal 
+Processor 
+RF Chain 
+RF Chain ... 
+RF Chain 
+M
+RF Chains 
+... M
+Movable 
+Antennas 
+Receive 
+Region 
+rx
+ry
+¦
+... 
+tL paths 
+... 
+rL paths 
+Transmitter Receiver 
+Fig. 1. The MA-enabled MIMO communication system.
+strate the capacity gains of the proposed MA-enabled
+MIMO systems over conventional MIMO systems with
+FPAs, and shed more light on the performance gains of
+MA systems. In particular, it is shown that by jointly
+designing the positions of transmit and receive MAs,
+the total MIMO channel power can undergo signiﬁcant
+improvement while the condition number of the MIMO
+channel decreases with the size of the transmit/receive
+region, thus leading to higher MIMO channel capacity.
+The remainder of this paper is organized as follows. Section
+II describes the system model and the problem formulation
+to characterize the MA-enabled MIMO system capacity. In
+Section III, we propose an alternating optimization algorithm
+to solve the formulated problem under different setups. Section
+IV provides numerical results and discussions. Finally, we
+conclude this paper in Section V .
+Notations: Symbols for vectors (lower case) and matrices
+(upper case) are in boldface. (·)T and (·)H denote the trans-
+pose and conjugate transpose (Hermitian), respectively. The set
+of P ×Q dimensional complex and real matrices is denoted
+by CP×Q and RP×Q, respectively. We use a[p] and A[p,q] to
+denote the pth entry of vector a and the entry of matrix A in its
+pth row and qth column, respectively. Re{a}denotes the real
+part of vector a. The trace of matrix A is denoted by Tr(A).
+diag(a) denotes a square diagonal matrix with the elements
+of vector a on the main diagonal, while diag (A) denotes a
+column vector consisting of the main diagonal elements of
+matrix A. A ⪰0 indicates that A is a positive semi-deﬁnite
+matrix. CN(0,Γ) denotes the circularly symmetric complex
+Gaussian (CSCG) distribution with mean zero and covariance
+matrix Γ. We use IK to represent the identity matrix of order
+K. The 2-norm of vector a is denoted by ∥a∥2. ∥A∥2 and
+∥A∥F denote the spectral norm and Frobenius norm of matrix
+A, respectively. rank (A) denotes the rank of matrix A. The
+amplitude and phase of complex number aare denoted by |a|
+and ∠a, respectively.
+II. S YSTEM MODEL AND PROBLEM FORMULATION
+A. MA-Enabled MIMO System
+As shown in Fig. 1, we consider a MIMO communication
+system with N transmit MAs and M receive MAs. The
+transmit and receive MAs are connected to RF chains via
+ﬂexible cables, and thus their positions can be adjusted in
+real time. The positions of the nth (n= 1,2,...,N ) transmit
+MA and mth ( m = 1 ,2,...,M ) receive MA can be repre-
+sented by Cartesian coordinates tn = [xt,n,yt,n]T ∈Ct and
+rm = [xr,m,yr,m]T ∈Cr, where Ct and Cr denote the given
+two-dimensional (2D) regions within which the transmit and
+receive MAs can move freely, respectively. Without loss of
+generality, we set Ct and Cr as square regions with size A×A.
+We consider narrow-band quasi-static channels, where the
+transmitter and receiver are static or move slowly in the
+given regions. In contrast, the transmit and receive MAs are
+assumed to be able to move sufﬁciently fast, such that the time
+overhead for adjusting MA positions is tolerable compared
+to the much longer channel coherence time. For MA-enabled
+MIMO communication systems, the channel is reconﬁgurable
+by adjusting the positions of transmit and receive MAs.
+Denote the collections of the coordinates of N transmit MAs
+and M receive MAs by ˜t = [ t1,t2,..., tN] ∈ R2×N and
+˜r = [r1,r2,..., rM] ∈R2×M, respectively. Then, the MIMO
+channel matrix from the transmitter to the receiver is given by
+H(˜t,˜r) ∈CM×N, which is a function of ˜t and ˜r in general.
+Let s ∈ CN denote the transmit signal vector. The cor-
+responding covariance matrix is deﬁned as Q ≜ E{ssH}∈
+CN×N, with Q ⪰ 0. We consider an average sum power
+constraint at the transmitter given by E{∥s∥2
+2}≤ P, which is
+equivalent to Tr(Q) ≤P. The received signal vector is thus
+given by
+y(˜t,˜r) = H(˜t,˜r)s + z, (1)
+where z ∼CN(0,σ2IM) denotes the additive white Gaussian
+noise (AWGN) vector at the receiver, which is assumed to be
+CSCG distributed with zero mean, and σ2 being the average
+noise power.
+B. Field-Response Based Channel Model
+For the MA-enabled MIMO communication system, the
+channel matrix is determined by the signal propagation en-
+vironment and the positions of transmit and receive MAs. We
+consider the far-ﬁeld wireless channel model, where the size
+of the transmit/receive region is much smaller than the signal
+propagation distance [27], [28]. Thus, for each channel path
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 4 ---
+4
+Transmit 
+Region 
+tx
+ty
+tz
+p
+tT
+p
+tI
+cos p
+tT
+sin cos p p 
+t t T I
+pth Path 
+Direction 
+sin sin p p 
+t t T I
+Transmit 
+Region 
+tx
+ty
+tz
+pn3D t
+  
+3D Tpn t 
+to
+Fig. 2. The spatial angles and path differences for transmit region.
+component, all MAs in the transmit/receive region experience
+the same angle of departure (AoD)/angle of arrival (AoA),
+and amplitude of the complex path coefﬁcient 1, while the
+phase of the complex path coefﬁcient varies for different
+transmit/receive MAs at different positions.
+Denote the number of transmit paths and receive paths as
+Lt and Lr, respectively. As shown in Fig. 2, the elevation and
+azimuth AoDs of the pth (p= 1,2,...,L t) transmit path are
+denoted by θp
+t ∈[0,π] and φp
+t ∈[0,π], respectively. Then, the
+normalized wave vector of the pth transmit path can be repre-
+sented by np = [sin θp
+t cos φp
+t,cos θp
+t,sin θp
+t sin φp
+t]T. Denote
+the three-dimensional (3D) coordinate vector of the transmit
+MA and origin of the transmit region by t3D = [ xt,yt,0]T
+and ot = [0,0,0]T, respectively. Then, the difference of the
+signal propagation for the pth transmit path between position
+t3D and ot is given by
+ρp
+t(t) = (np)T(t3D −ot) = xtsin θp
+t cos φp
+t + ytcos θp
+t. (2)
+Thus, the phase difference of the pth transmit path between
+t3D and ot is 2πρp
+t(t)/λ, where λ is the carrier wavelength.
+The ﬁeld response vector of the transmit MA can be deﬁned
+as
+g(t) ≜
+[
+ej2π
+λ ρ1
+t(t),ej2π
+λ ρ2
+t(t),...,e j2π
+λ ρLt
+t (t)
+]T
+∈CLt. (3)
+By stacking g(tn) of all N transmit MAs, the ﬁeld response
+matrix of all the N transmit MAs is given by
+G(˜t) ≜ [g (t1) ,g (t2) ,..., g (tN)] ∈CLt×N. (4)
+Similarly, denote the elevation and azimuth AoAs of the qth
+(q= 1,2,...,L r) receive path as θq
+r ∈[0,π] and φq
+r ∈[0,π],
+respectively. The ﬁeld response vector of the receive MA is
+1To characterize the theoretical performance limit of the MA-enabled
+MIMO communication system, the multi-path channel components between
+Ct and Cr are assumed to be known for optimization in this paper. To acquire
+the information of such multi-path channel components, MAs can be moved
+to a sufﬁcient number of locations for channel measurement. Based on the
+channel measurements, sparse signal recovery algorithms, such as compressed
+sensing (CS), can be employed to estimate the multi-path channel components
+such as the AoDs, AoAs, and path coefﬁcients of different paths [29].
+deﬁned as
+f(r) ≜
+[
+ej2π
+λ ρ1
+r(r),ej2π
+λ ρ2
+r(r),...,e j2π
+λ ρLr
+r (r)
+]T
+∈CLr, (5)
+where ρq
+r(r) = xrsin θq
+r cos φq
+r + yrcos θq
+r is the difference
+of the signal propagation distance for the qth receive path
+between position r and the origin of the receive region. Thus,
+the ﬁeld response matrix of all the M receive MAs is written
+as
+F(˜r) ≜ [f (r1) ,f (r2) ,..., f (rM)] ∈CLr×M. (6)
+Furthermore, we deﬁne the path response matrix from the
+origin of the transmit region to that of the receive region as
+Σ ∈CLr×Lt, where Σ[q,p] is the response between the pth
+transmit path and the qth receive path. As a result, the channel
+matrix from the transmitter to the receiver is given by
+H(˜t,˜r) = F(˜r)HΣG(˜t). (7)
+C. Problem Formulation
+To investigate the theoretical capacity limit of the MA-
+enabled MIMO communication system, the perfect multi-path
+channel components are assumed to be available. Thus, the
+MIMO channel capacity can be written as 2 3
+C(˜t,˜r) = max
+Q:Q⪰0,
+Tr(Q)≤P
+log2 det
+(
+IM + 1
+σ2 H(˜t,˜r)QH(˜t,˜r)H
+)
+.
+(8)
+Note that different from the conventional MIMO channel with
+FPAs, the MA-enabled MIMO channel capacity shown in (8)
+is depended on the positions of transmit and receive MAs ˜t
+and ˜r, which inﬂuence the channel matrix H(˜t,˜r) as well as
+the corresponding optimal transmit covariance matrix Q.
+2If the optimal solution for the positions of transmit and receive MAs
+is derived, we can obtain the maximum capacity for MA-enabled MIMO
+systems. While for any locally optimal position solution, C(˜t, ˜r) represents
+the MIMO capacity for the given MA positions. Thus, we use the term
+“capacity” throughout this paper for consistency.
+3In this paper, we focus on characterizing the point-to-point MIMO
+communication system capacity without co-channel interference. Nonetheless,
+another parallel work [28] has recently shown that the interference among
+multiple users can also be efﬁciently mitigated by optimizing the MAs’
+positions.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 5 ---
+5
+In order to avoid the coupling effect between the antennas
+in the transmit/receive region, a minimum distance D is
+required between each pair of antennas, i.e., ∥tk −tl∥2 ≥D,
+k,l = 1 ,2,...,N , k ̸= l, and ∥rk −rl∥2 ≥ D, k,l =
+1,2,...,M , k ̸= l. Then, we aim to maximize the capacity
+of an MA-enabled MIMO channel by jointly optimizing the
+MA positions ˜t, ˜r and the transmit signals’ covariance matrix
+Q, subject to the minimum distance requirements for the MA
+positions. Accordingly, we formulate the optimization problem
+as
+(P1) max
+˜t,˜r,Q
+log2 det
+(
+IM + 1
+σ2 H(˜t,˜r)QH(˜t,˜r)H
+)
+(9a)
+s.t. ˜t ∈Ct, (9b)
+˜r ∈Cr, (9c)
+∥tk −tl∥2 ≥D, k,l = 1,2,...,N, k ̸= l,
+(9d)
+∥rk −rl∥2 ≥D, k,l = 1,2,...,M, k ̸= l,
+(9e)
+Tr(Q) ≤P, (9f)
+Q ⪰0. (9g)
+Problem (P1) is difﬁcult to solve because the objective func-
+tion is highly non-concave with respect to the MA positions ˜t
+and ˜r, and the minimum distance constraints in (9d) and (9e)
+are non-convex. Besides, the coupling between Q, ˜t, and ˜r
+makes (P1) more intractable.
+III. P ROPOSED ALGORITHM
+In this section, we present an alternating optimization al-
+gorithm to solve (P1). First, (P1) is transferred into a more
+tractable form with respect to {tn}N
+n=1 ∪{rm}M
+m=1 ∪Q.
+Then, three subproblems are solved in the sequel, which
+respectively optimize the transmit signals’ covariance matrix
+Q, one transmit MA position tn, and one receive MA position
+rm, with all the other variables being ﬁxed. The developed
+alternating optimization algorithm can obtain a (at least)
+locally optimal solution for (P1) by iteratively solving the
+above three subproblems in an alternate manner. After that, by
+deriving more manageable expressions for the MIMO channel
+capacity in the low-SNR regime, we present an alternative
+solution for (P1) with lower complexity. Finally, we investigate
+speciﬁc cases of (P1) that involve a single MA either at the
+transmitter or at the receiver, i.e., the SIMO/MISO setup, and
+propose simpliﬁed algorithms for them.
+A. Alternating Optimization for (P1)
+In this subsection, we present the framework of the pro-
+posed alternating optimization method to address (P1). The
+primary concept involves the iterative resolution of a sequence
+of subproblems derived from (P1), with each subproblem
+focusing on the optimization of a single variable in the set
+{tn}N
+n=1 ∪{rm}M
+m=1 ∪Q with the remaining M+N variables
+ﬁxed, which tackles the main difﬁculty of the complicated
+coupling among the optimization variables.
+1) Optimization of Q with given {tn}N
+n=1 and {rm}M
+m=1:
+In this subproblem, our objective is optimizing the transmit
+covariance matrix Q while given the transmit MA positions
+{tn}N
+n=1 and receive MA positions {rm}M
+m=1. It is worth
+noting that, with given H(˜t,˜r), (P1) becomes a convex
+optimization problem for Q, and the optimal solution can be
+obtained through eigenmode transmission [30]. Speciﬁcally,
+we deﬁne H(˜t,˜r) = ˜U ˜Λ ˜V
+H
+as the truncated singular value
+decomposition (SVD) of H(˜t,˜r), where ˜U ∈CM×S, ˜V ∈
+CN×S, ˜Λ ∈CS×S, and S = rank(H(˜t,˜r)) ≤min (N,M ).
+Therefore, the transmit precoding matrix and receive combin-
+ing matrix for achieving the maximum capacity can be set as
+˜V diag([
+√
+p⋆
+1,
+√
+p⋆
+2,..., √p⋆
+S]) and ˜U, respectively, and the
+optimal solution for Q is given by
+Q⋆ = ˜V diag([p⋆
+1,p⋆
+2,...,p ⋆
+S]) ˜V
+H
+, (10)
+where the power of the sth ( s = 1 ,2,...,S ) data stream,
+p⋆
+s, is obtained based on the water-ﬁlling principle: p⋆
+s =
+max
+(
+0,1/p0 −σ2/˜Λ[s,s]2
+)
+, with ∑S
+s=1 p⋆
+s = P. Thus,
+given {tn}N
+n=1 and {rm}M
+m=1, the MIMO channel capacity
+can be expressed as
+C(˜t,˜r) =
+S∑
+s=1
+log2
+(
+1 +
+˜Λ[s,s]2p⋆
+s
+σ2
+)
+. (11)
+2) Optimization of rm with given Q, {rk,k ̸= m}M
+k=1
+and {tn}N
+n=1: In this subproblem, we aim to optimize rm
+in (P1) with given Q, {tn}N
+n=1, and {rk,k ̸= m}M
+k=1, ∀m∈
+M = {1,2,...,M }. Denote the eigenvalue decomposition
+(EVD) of Q by Q = UQV QUH
+Q, with UQ ∈CN×N and
+V Q ∈ CN×N. It is worth noting that as the matrix Q is
+positive and semi-deﬁnite, all diagonal elements of V Q are
+real numbers that are non-negative. Given {tn}N
+n=1 and Q,
+we deﬁne W(˜r) = H(˜t,˜r)UQV
+1
+2
+Q ∈CM×N and denote the
+mth column vector of W(˜r)H by w(rm) ∈CN, which is
+only determined by the position of the mth MA and can be
+written as
+w(rm) = V
+1
+2
+QUH
+QG(˜t)HΣHf(rm). (12)
+Thus, the objective function of (P1) is written with respect to
+˜r:
+b(˜r) ≜ log2 det
+(
+IM + 1
+σ2 H(˜t,˜r)QH(˜t,˜r)H
+)
+(13)
+= log2 det
+(
+IM + 1
+σ2 W(˜r)W(˜r)H
+)
+(a)
+= log 2 det
+(
+IN + 1
+σ2 W(˜r)HW(˜r)
+)
+= log2 det
+(
+IN + 1
+σ2
+M∑
+m=1
+w(rm)w(rm)H
+)
+,
+where the equality marked by (a) holds due to det(Ip +
+AB) = det(Iq+BA) for A ∈Cp×q and B ∈Cq×p. Notice
+from (13) that H(˜t,˜r)QH(˜t,˜r)H is in fact the summation
+of M rank-one matrices. To maximize the MIMO channel
+capacity, the M matrices should be optimally balanced by
+designing {rm}M
+m=1. Note that (13) explicitly decouples the
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 6 ---
+6
+position variables for all the M MAs, i.e., {rm}M
+m=1, which
+facilitates the following optimization of rm.
+Remove w(rm) from W(˜r)H and denote the
+remaining N × (M − 1) sub-matrix by WH
+m =
+[w(r1),w(r2),..., w(rm−1),w(rm+1),..., w(rM)].
+Thus, the objective function of (P1) in (13) is written as [8]
+¯b(rm) = log2 det
+(
+IN + 1
+σ2
+(
+WH
+mWm + w(rm)w(rm)H
+))
+(b1)
+= log 2 det
+(
+IN+ 1
+σ2
+(
+IN+ 1
+σ2 WH
+mWm
+)−1
+w(rm)w(rm)H
+)
++ log2 det
+(
+IN + 1
+σ2 WH
+mWm
+)
+(b2)
+= log 2
+(
+1 + 1
+σ2 w(rm)H
+(
+IN + 1
+σ2 WH
+mWm
+)−1
+w(rm)
+)
++ log2 det
+(
+IN + 1
+σ2 WH
+mWm
+)
+, (14)
+where the equality marked by (b1) holds due to the fact that
+det(AB) = det( A) det(B) holds for two square matrices
+A and B of equal size. The equality marked by (b2) holds
+because of det(Ip+AB) = det(Iq+BA) for A ∈Cp×q and
+B ∈Cq×p. Notice from (14) that the maximization of ¯b(rm)
+for given Q and {rk,k ̸= m}M
+k=1 is equivalent to maximizing
+g(rm) ≜ w(rm)HAmw(rm), (15)
+where Am ≜
+(
+IN + 1
+σ2 WH
+mWm
+)−1
+∈CN×N is a positive
+deﬁnite matrix independent to rm. During the iterations, to re-
+duce the computational complexity of matrix inverse operation
+for 2 ≤m≤M, matrix Am can be updated based on Am−1.
+Speciﬁcally, we deﬁne Z1 = [ w(rm−1),w(rm)] ∈ CN×2
+and Z2 = [w(rm−1),−w(rm)] ∈CN×2 such that
+WH
+mWm = WH
+m−1Wm−1 + Z1ZH
+2 . (16)
+Since (A+BC)−1 = A−1−A−1B(Iq+CA−1B)−1CA−1
+for A ∈Cp×p, B ∈Cp×q and C ∈Cq×p, we have [31]
+Am =Am−1− (17)
+1
+σ2 Am−1Z1
+(
+I2 + 1
+σ2 ZH
+2 Am−1Z1
+)−1
+ZH
+2 Am−1.
+Furthermore, we deﬁne a positive deﬁnite matrix
+Bm ≜ ΣG(˜t)UQV
+1
+2
+QAmV
+1
+2
+QUH
+QG(˜t)HΣH ∈CLr×Lr.
+(18)
+According to (12), g(rm) in (15) can be rewritten in the
+following form with respect to f(rm):
+g(rm) = f(rm)HΣG(˜t)UQV
+1
+2
+QAmV
+1
+2
+QUH
+QG(˜t)HΣHf(rm)
+= f(rm)HBmf(rm). (19)
+Notice that Bm is a constant matrix independent to rm. As
+a result, the subproblem for optimizing rm can be expressed
+as
+(P2-m) max
+rm
+f(rm)HBmf(rm) (20a)
+s.t. rm ∈Cr, (20b)
+∥rm −rk∥2 ≥D, k = 1,2,...,M, k ̸= m.
+(20c)
+As can be observed, the objective function of (P2-m) is a non-
+concave function for rm. Moreover, the minimum distance
+constraints (20c) are also non-convex. Thus, problem (P2-m)
+is still a non-convex optimization problem which is difﬁcult
+to solve. We will present the solution for (P2-m) in Section
+III-B, where the successive convex approximation (SCA) is
+used for relaxing this problem.
+3) Optimization of tn with given Q, {tl,l ̸= n}N
+l=1 and
+{rm}M
+m=1: In this subproblem, we aim to optimize tn in (P1)
+with given Q, {rm}M
+m=1, and {tl,l ̸= n}N
+l=1, ∀n ∈ N=
+{1,2,...,N }. Since the singular values of channel matrices
+H(˜t,˜r) and H(˜t,˜r)H are the same, the channel capacity of
+H(˜t,˜r) is always equal to that of H(˜t,˜r)H under the same
+transmit power constraint, which is also known as the channel
+reciprocity for MIMO systems, i.e.,
+max
+Q:Tr(Q)≤P,Q⪰0
+log2 det
+(
+IM + 1
+σ2 H(˜t,˜r)QH(˜t,˜r)H
+)
+(21)
+= max
+S:Tr(S)≤P,S⪰0
+log2 det
+(
+IN + 1
+σ2 H(˜t,˜r)HSH(˜t,˜r)
+)
+,
+where S ∈ CM×M is the equivalent covariance matrix of
+transmit signals for H(˜t,˜r)H, with Tr(S) ≤P and S ⪰0.
+Similar to the optimization of Q with given {tn}N
+n=1 and
+{rm}M
+m=1, the optimal S is given by the eigenmode transmis-
+sion. Speciﬁcally, the truncated SVD of H(˜t,˜r)H is written
+as H(˜t,˜r)H = ˜V ˜Λ ˜U
+H
+. Then, the optimal S is given by
+S⋆ = ˜Udiag([p⋆
+1,p⋆
+2,...,p ⋆
+S]) ˜U
+H
+, (22)
+where the optimal power allocated to Sdate streams, {p⋆
+s}S
+s=1,
+is given by (10).
+Similar to the procedure for optimizing rm, we denote
+S = USV SUH
+S as the EVD of S, with US ∈CM×M and
+V S ∈CM×M. As the matrix S is positive and semi-deﬁnite,
+all diagonal elements of V S are real numbers that are non-
+negative. Then, we deﬁne P(˜t) = H(˜t,˜r)HUSV
+1
+2
+S ∈CN×M
+and denote the nth column vector of P(˜t)H by p(tn) =
+V
+1
+2
+SUH
+S F(˜r)HΣg (tn) ∈ CM. Then, remove p(tn) from
+P(˜t)H and denote the remaining M ×(N −1) sub-matrix
+by PH
+n = [ p(t1),p(t2),..., p(tn−1),p(tn+1),..., p(tN)].
+Let Cn ≜
+(
+IM + 1
+σ2 PH
+nPn
+)−1
+∈CM×M, which can be
+updated similarly to (17). Next, we deﬁne
+Dn ≜ ΣHF(˜r)USV
+1
+2
+SCnV
+1
+2
+SUH
+S F(˜r)HΣ ∈CLt×Lt.
+(23)
+As a result, the optimization of tn can be expressed as
+(P3-n) max
+tn
+g (tn)H Dng (tn) (24a)
+s.t. tn ∈Ct, (24b)
+∥tn −tl∥2 ≥D, l = 1,2,...,N, l ̸= n.
+(24c)
+As can be observed, problem (P3-n) has the same structure as
+(P2-m). Thus, in the following, we only provide the details of
+the solution for problem (P2-m), and problem (P3-n) can be
+solved in a similar way.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 7 ---
+7
+B. Solution for Problem (P2-m)
+To solve problem (P2-m), the SCA technique is adopted to
+optimize the position of the mth receive MA, rm. Although
+the objective function f(rm)HBmf(rm) is a non-concave
+function over rm, it is convex with respect to f(rm). Since
+the convex function can be globally lower-bounded by its ﬁrst-
+order Taylor expansion at arbitrary point, we can derive the
+following lower bound on f(rm)HBmf(rm) with given local
+point ri
+m in the ith iteration of SCA [32]:
+g(rm) = f(rm)HBmf(rm) (25)
+≥f(ri
+m)HBmf(ri
+m)
++ 2Re
+{
+f(ri
+m)HBm
+(
+f(rm) −f(ri
+m)
+)}
+= 2 Re
+{
+f(ri
+m)HBmf(rm)
+}
+  
+¯g(rm)
+−f(ri
+m)HBmf(ri
+m)  
+constant
+,
+where ri
+m ∈ R2 is a constant vector which represents
+the value of rm in the ith iteration. Thus, maximizing
+f(rm)HBmf(rm) can be simpliﬁed to maximizing ¯g(rm) ≜
+Re
+{
+f(ri
+m)HBmf(rm)
+}
+. Although ¯g(rm) is a linear func-
+tion over f(rm), it is still neither concave nor convex over
+rm. Thus, we cannot construct the surrogate function lower-
+bounding the objective function only by the ﬁrst-order Taylor
+expansion of ¯g(rm). Alternatively, we construct a surrogate
+function that locally approximates the objective function by
+using the second-order Taylor expansion. Denote the gradient
+vector and Hessian matrix of ¯g(rm) over rm by ∇¯g(rm) ∈R2
+and ∇2¯g(rm) ∈ R2×2, respectively, with their derivations
+provided in Appendix A. Then, we construct a positive real
+number δm making δmI2 ⪰∇2¯g(rm), with the closed-form
+expression given in Appendix B. Thus, based on Taylor’s
+theorem, we can ﬁnd a quadratic surrogate function to globally
+lower-bound the objective function ¯g(rm) as [33]
+¯g(rm) ≥¯g(ri
+m) + ∇¯g(ri
+m)T (
+rm −ri
+m
+)
+(26)
+−δm
+2
+(
+rm −ri
+m
+)T (
+rm −ri
+m
+)
+= −δm
+2 rT
+mrm +
+(
+∇¯g(ri
+m) + δmri
+m
+)T
+rm
+  
+˜g(rm)
++ ¯g(ri
+m) −δm
+2 (ri
+m)Tri
+m
+  
+constant
+.
+Thus, maximizing ¯g(rm) can be converted to maximizing
+˜g(rm) ≜ −δm
+2 rT
+mrm + (∇¯g(ri
+m) + δmri
+m)Trm. To this end,
+in the ith iteration of SCA, the optimization problem of the
+mth receive MA position rm can be relaxed as
+(P4-m) max
+rm
+−δm
+2 rT
+mrm +
+(
+∇¯g(ri
+m) + δmri
+m
+)T
+rm
+(27)
+s.t. (20b) ,(20c).
+Since the objective function of (P4-m) is a concave quadratic
+function over rm, the global optimum for maximizing ˜g(rm)
+by neglecting constraints (20b) and (20c) is obtained in closed
+form as
+r⋆
+m,i+1 = 1
+δm
+∇¯g(ri
+m) + ri
+m. (28)
+If r⋆
+m,i+1 satisﬁes (20b) and (20c), it is the global optimum
+for problem (P4-m). However, if r⋆
+m,i+1 does not satisfy (20b)
+or (20c), we cannot obtain the optimal solution due to the
+non-convex constraints (20c) 4. In this case, we propose the
+following solution. Denote the gradient vector of ∥rm−rk∥2
+over rm as ∇∥rm−rk∥2 = (rm−rk)/∥rm−rk∥2. Since the
+denominator term ∥rm −rk∥2 ≥D >0, the gradient vector
+always exists. As ∥rm −rk∥2 is a convex function over rm,
+the following inequality holds utilizing the ﬁrst-order Taylor
+expansion at ri
+m:
+∥rm −rk∥2 ≥∥ri
+m −rk∥2 +
+(
+∇∥ri
+m −rk∥2
+)T
+(rm −ri
+m)
+= ∥ri
+m −rk∥2 + 1
+∥rim −rk∥2
+(ri
+m −rk)T(rm −ri
+m)
+= 1
+∥rim −rk∥2
+(ri
+m −rk)T(rm −rk). (29)
+Hereto, for a given ri
+m obtained in the ith iteration, if
+r⋆
+m,i+1 does not satisfy (20b) or (20c), the convex position
+optimization problem for the mth receive MA is transformed
+into
+(P5-m) max
+rm
+−δm
+2 rT
+mrm +
+(
+∇¯g(ri
+m) + δmri
+m
+)T
+rm
+(30a)
+s.t. 1
+∥rim −rk∥2
+(ri
+m −rk)T(rm −rk) ≥D,
+k= 1,2,...,M, k ̸= m, (30b)
+(20b).
+Since the objective function (30a) is quadratic and constraints
+(30b) are linear with respect to rm, (P5-m) is a quadratic
+programming (QP) problem and can be efﬁciently solved by
+using quadprog [34]. The details of the proposed algorithm
+to solve problem (P2-m) are summarized in Algorithm 1.
+Speciﬁcally, from step 4 to step 6, we compute the gradient
+vector and Hessian matrix of ¯g(rm) at ri
+m via (40) and (41),
+respectively, and then obtain δm via (43). Then, we obtain
+r⋆
+m,i+1 as the global optimum to maximize ˜g(rm) in step 7. If
+r⋆
+m,i+1 satisﬁes (20b) and (20c), we set it as ri+1
+m for the next
+iteration. Otherwise we solve the QP problem (30) to obtain
+ri+1
+m in step 11. The proposed algorithm terminates when the
+increase of the objective value in (20a) is below ϵ1, which
+is a predeﬁned convergence threshold. Finally, we output the
+position of the mth receive MA in step 15.
+Next we analyze the convergence of the proposed Algo-
+rithm 1. Denote the two constant terms in (25) and (26) by
+Γ1(ri
+m) = −f(ri
+m)HBmf(ri
+m) and Γ2(ri
+m) = ¯g(ri
+m) −
+δm
+2 (ri
+m)Tri
+m, respectively. Then, for the ith iteration, the
+4To reduce the computational complexity of the proposed algorithm and
+time overhead of antenna movement in practical scenarios, the transmit/receive
+region can be divided into N/M sub-regions, where each MA can move freely
+in its corresponding sub-region enabled by an independent driver. In this case,
+we can obtain the optimal solution for problem (P4-m) for some typical convex
+sub-regions in closed form, as shown in (35) and (36).
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 8 ---
+8
+Algorithm 1 SCA for Solving Problem (P2-m)
+1: Input: M, Lr, {rk,k ̸= m}M
+k=1, Bm, {θq
+r}Lr
+q=1, {φq
+r}Lr
+q=1,
+Cr, D, ϵ1, r0
+m.
+2: Initialization: i←0.
+3: while Increase of the objective value in (20a) is above ϵ1
+do
+4: Obtain b via (38).
+5: Compute ∇¯g(ri
+m) and ∇2¯g(ri
+m) via (40) and (41),
+respectively.
+6: Update δm via (43).
+7: Obtain r⋆
+m,i+1 via (28).
+8: if r⋆
+m,i+1 satisﬁes (20b) and (20c) then
+9: ri+1
+m ←r⋆
+m,i+1.
+10: else
+11: Obtain ri+1
+m by solving (30).
+12: end if
+13: i←i+ 1.
+14: end while
+15: Output: rm.
+objective function in (20a) can be written as
+g(ri
+m)
+(c1)
+= 2
+(
+˜g(ri
+m) + Γ2(ri
+m)
+)
++ Γ1(ri
+m) (31)
+(c2)
+≤ 2
+(
+˜g(ri+1
+m ) + Γ2(ri
+m)
+)
++ Γ1(ri
+m)
+(c3)
+≤ 2¯g(ri+1
+m ) + Γ1(ri
+m)
+(c4)
+≤ g(ri+1
+m ),
+where the equality marked by (c1) holds because the ﬁrst-
+order Taylor expansion in (25) and the second-order Taylor
+expansion in (26) are tight at ri
+m. The inequality marked by
+(c2) holds because we maximize the value of ˜g(rm) in the
+ith iteration, and the equality can be achieved by choosing
+ri+1
+m = ri
+m. The inequalities marked by (c3) and (c4) hold
+because ˜g(rm) + Γ2(ri
+m) and 2¯g(rm) + Γ1(ri
+m) are lower
+bounds on ¯g(rm) and g(rm) at ri+1
+m , respectively. Thus,
+sequence {g(ri
+m)}∞
+i=0 is non-decreasing and will converge to
+a maximum value.
+In the following, we analyze the computational complexity
+of Algorithm 1. Speciﬁcally, from step 4 to step 7, the com-
+plexities of calculating b, ∇¯g(ri
+m), ∇2¯g(ri
+m), δm, and r⋆
+m,i+1
+are O(NLr), O(Lr), O(Lr), O(1), and O(1), respectively.
+In step 11, the complexity to solve the QP problem (P5-m)
+is O(M1.5 ln(1/β)) with accuracy β for the interior-point
+method [35]. Let γ1
+r and γ2
+r denote the maximum number
+of inner iterations (i.e., iterations to repeat steps 4-13) and
+the maximum number of iterations required to perform step
+11, respectively. Thus, the total complexity of Algorithm 1 is
+O(NLrγ1
+r + M1.5 ln(1/β)γ2
+r), which is polynomial over N,
+Lr, and M.
+C. Solution for Problem (P3-n)
+Since problem (P3-n) has a similar structure as (P2-m), we
+can modify Algorithm 1 to obtain the position of the nth
+transmit MA tn by replacing
+{
+M,Lr,rm,Bm,Cr,{rk,k ̸= m}M
+k=1,{θq
+r}Lr
+q=1,{φq
+r}Lr
+q=1
+}
+Algorithm 2 Alternating Optimization for Solving Problem
+(P1)
+1: Input: Σ, P, σ, M, N, Lr, Lt, {θq
+r}Lr
+q=1, {φq
+r}Lr
+q=1,
+{θp
+t}Lt
+p=1, {φp
+t}Lt
+p=1, Cr, Ct, D, ϵ1, ϵ2.
+2: Initialize {rm}M
+m=1 and {tn}N
+n=1.
+3: while Increase of the channel capacity in (8) is above ϵ2
+do
+4: Given {rm}M
+m=1 and {tn}N
+n=1, obtain the optimal Q of
+(P1) via (10).
+5: for m= 1 →M do
+6: Obtain Bm via (18).
+7: Given Q, {rk,k ̸= m}M
+k=1, and {tn}N
+n=1, solve
+problem (P2-m) to update rm.
+8: end for
+9: Calculate S⋆ via (22).
+10: for n= 1 →N do
+11: Obtain Dn via (23).
+12: Given Q, {tl,l ̸= n}N
+l=1, and {rm}M
+m=1, solve
+problem (P3-n) to update tn.
+13: end for
+14: end while
+15: Output: ˜t, ˜r, Q.
+with{
+N,Lt,tn,Dn,Ct,{tl,l ̸= n}N
+l=1,{θp
+t}Lt
+p=1,{φp
+t}Lt
+p=1
+}
+.
+Similarly, the monotonic convergence is guaranteed for
+solving problem (P3-n) with Algorithm 1. The corresponding
+computational complexity is O(MLtγ1
+t + N1.5 ln(1/β)γ2
+t),
+with γ1
+t and γ2
+t denoting the maximum number of iterations
+to perform steps 4-13 and step 11, respectively.
+D. Overall Algorithm
+With the solutions for problem (P2-m) and (P3-n) obtained
+above, we now ﬁnalize the proposed alternating optimization
+algorithm to solve (P1). The overall algorithm is summarized
+in Algorithm 2. Speciﬁcally, in step 4, we ﬁrst obtain the
+optimal Q of (P1) with ﬁxed {rm}M
+m=1 and {tn}N
+n=1 shown
+in (10). Then, from step 5 to step 8, we optimize the positions
+of M receive MAs sequentially by solving problem (P2-m)
+based on SCA. Similarly, from step 10 to step 13, the positions
+of N transmit MAs are optimized by solving problem (P3-
+n) successively. The algorithm solves the three subproblems
+iteratively, until the increase of the channel capacity in (8) is
+below ϵ2, which is a predeﬁned convergence threshold.
+The convergence of the proposed Algorithm 2 is analyzed
+as follows. The alternating optimization of variables {tn}N
+n=1,
+{rm}M
+m=1, and Q guarantees that the algorithm produces a
+non-decreasing sequence of objective values for (P1) during
+the iterations, which will not go to inﬁnity due to the ﬁnite
+channel capacity. Since the convergence criterion of Algo-
+rithm 2 is the inability to further increase the objective value
+of (P1) by optimizing any variable in {tn}N
+n=1, {rm}M
+m=1, and
+Q, Algorithm 2 is guaranteed to converge to a solution of (P1)
+that is (at least) locally optimal.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 9 ---
+9
+Transmit/Receive 
+Region 
+0 0 
+1 1 /t r 
+0 0 
+2 2 /t r 
+0 0 
+1 1 /t r 0 0 
+2 2 /t r 
+0 0 
+3 3 /t r 0 0 
+4 4 /t r 
+Fig. 3. An example of transmit/receive MA positioning initialization based
+on circle packing for N(M) = 2(left) and N(M) = 4(right).
+The computational complexity of Algorithm 2 is an-
+alyzed as follows. Speciﬁcally, in step 4 and step 9,
+the complexity to calculate Q⋆ and S⋆ based on water-
+ﬁlling is O(MN min(M,N )) [36]. Thus, the total com-
+plexity is O((MNLrγ1
+r + M2.5 ln(1/β)γ2
+r + MNLtγ1
+t +
+N2.5 ln(1/β)γ2
+t + MN min(M,N ))γ) with γ denoting the
+maximum number of outer iterations for repeating steps 4–13
+in Algorithm 2.
+E. Initialization
+In the following subsection, we propose an initialization
+scheme with low-complexity for the transmit/receive MA
+positions design in Algorithm 2 based on the circle packing
+scheme [37]. Intuitively, all the transmit/receive MAs should
+be sufﬁciently separated for the following two reasons. On one
+hand, increasing the distance between MAs can reduce their
+coupling effect. One the other hand, during the SCA process,
+it is more likely for each MA to update the position with the
+largest capacity in its neighborhood satisfying the minimum
+distance constraints. Under such case, we can easily set r⋆
+m,i+1
+in (28) as the optimal solution for problem (P4-m) instead of
+relaxing it into (P5-m). Therefore, we propose that the initial
+positions of the MAs are obtained based on circle packing. As
+shown in Fig. 3, we assume that each MA occupies an initial
+circle region with equal radius. Then, we arrange N (or M)
+circles with the maximum radius in Ct (or Cr) such that no
+overlapping among them occurs. The centers of the arranged
+N (or M) circles are set as the initial MA positions {t0
+n}N
+n=1
+(or {r0
+m}M
+m=1).
+F . Alternative Solution for Problem (P1) in the Low-SNR
+Regime
+In the preceding subsections, an alternating optimization
+algorithm has been proposed to deal with the capacity max-
+imization problem for the general MIMO channel. In this
+subsection, we investigate the particular case in the low-
+SNR regime, and represent the channel capacity in the more
+manageable form with respect to the positions of transmit
+and receive MAs, based on which we propose an alternative
+algorithm for solving the capacity maximization problem with
+lower complexity.
+The low-SNR regime may occur in practice due to the low
+transmission power or large propagation distance between the
+transmitter and the receiver. In such case, the optimal trans-
+mission scheme is the strongest eigenmode beamforming that
+concentrates the transmit power to the strongest eigenchannel
+[30]. Speciﬁcally, denoting Q = PuQuH
+Q with uQ ∈ CN
+being the transmit beamforming vector, then the capacity in
+the low-SNR regime can be represented as
+CL(˜t,˜r) = max
+uQ:∥uQ∥2
+2=1
+log2 det
+(
+IM + P
+σ2 H(˜t,˜r)uQ (32)
+×uH
+QH(˜t,˜r)H
+)
+(d)
+= max
+uQ:∥uQ∥2
+2=1
+log2
+(
+1 + P
+σ2 ∥H(˜t,˜r)uQ∥2
+2
+)
+,
+where the equality marked by (d) can be derived because of
+det(Ip + AB) = det( Iq + BA) for A ∈Cp×q and B ∈
+Cq×p. As shown in (32), maximizing channel capacity in the
+low-SNR regime is equivalent to maximizing ∥H(˜t,˜r)uQ∥2
+2.
+Given H(˜t,˜r), the optimal uQ is the strongest right singular
+vector of H(˜t,˜r). Besides, we denote c = ΣG(˜t)uQ ∈CLr.
+Then, we have ∥H(˜t,˜r)uQ∥2
+2 = ∑M
+m=1 |cHf(rm)|2. Given
+uQ, {rk,k ̸= m}M
+k=1, and {tn}N
+n=1, maximizing the channel
+capacity in (32) is equivalent to maximizing |cHf(rm)|2 with
+respect to each rm. Thus, the subproblem for optimizing rm
+can be formulated similarly to problem (P2-m) by replacing
+Bm with ccH, which has a lower computational complexity
+during the iterations. Moreover, given uQ, {tl,l ̸= n}N
+l=1,
+and {rm}M
+m=1, the optimal S is given by S = PuSuH
+S
+with uS ∈CM being the strongest right singular vector of
+H(˜t,˜r)H. Deﬁning d ≜ ΣHF(˜r)uS ∈CLt, the subproblem
+for optimizing tn can be expressed similarly to problem (P3-n)
+by replacing Dn with ddH.
+As a result, by iteratively optimizing one single variable in
+{tn}N
+n=1, {rm}M
+m=1, and uQ with the other M+ N variables
+being ﬁxed, an alternating optimization algorithm similar as
+Algorithm 2 can be employed to obtain a locally optimal solu-
+tion for maximizing channel capacity in the low-SNR regime.
+The required complexity of the overall algorithm is given
+by O((Lrγ1
+r + M2.5 ln(1/β)γ2
+r + Ltγ1
+t + N2.5 ln(1/β)γ2
+t +
+MN min(M,N ))γ), which is lower than the general case of
+Algorithm 2 because c and d are ﬁxed in the inner SCA
+iterations for solving problems (P2-m) and (P3-n).
+G. Alternative Solution for Problem (P1) with Single-Antenna
+Transmitter/Receiver
+In the previous subsection, by considering N ≥ 1 and
+M ≥1, we have studied (P1) for the general MIMO channel
+to transmit multiple data streams in parallel. In the following
+subsection, we investigate (P1) for the particular cases where
+N = 1 or M = 1, which restrict the transmission of one data
+stream. As a result, the expressions for the optimal transmit
+covariance matrix and the channel capacity can be simpliﬁed,
+allowing for simpler alternating optimization algorithms to
+solve (P1) with signiﬁcantly lower complexity compared to
+Algorithm 2.
+First, (P1) is investigated for the MISO case withN >1 and
+M = 1. The ﬁeld response matrix of the receive region, F(˜r),
+can be rewritten as vector f(r) ∈CLr, where r represents
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 10 ---
+10
+the position of the receive MA. The effective channel row
+vector can be written as h(˜t,r)H = f(r)HΣG(˜t) ∈C1×N.
+The optimal transmit covariance matrix in the MISO case is
+obtained according to the maximum ratio transmission (MRT),
+i.e., Q⋆ = Ph(˜t,r)h(˜t,r)H/∥h(˜t,r)∥2
+2. Thus, the MISO
+channel capacity is expressed as
+CMISO(˜t,r) = log2
+(
+1 + 1
+σ2 h(˜t,r)HQ⋆h(˜t,r)
+)
+(33)
+= log2
+(
+1 + P
+σ2 ∥h(˜t,r)∥2
+2
+)
+.
+In this case, problem (P1) is converted to the equivalent
+problem to maximize total channel power, ∥h(˜t,r)∥2
+2, via
+optimizing ˜t and r
+(P1-MISO) max
+˜t,r
+∥h(˜t,r)∥2
+2 (34)
+s.t. (9b) ,(9c),(9d).
+Given {tn}N
+n=1, the subproblem for optimizing r can be
+formulated similarly to problem (P2-m) by setting Bm ←
+ΣG(˜t)G(˜t)HΣH ∈CLr×Lr. Note that the non-convex mini-
+mum distance constraints (9e) are removed since there is only
+a single MA in the receive region. Then, by dropping the cor-
+responding non-convex constraints (20c), problem (P4-m) is a
+convex QP problem, which can be solved efﬁciently without
+relaxation into problem (P5-m). Moreover, we can obtain the
+optimal solution for problem (P4-m) for some typical convex
+Cr based on r⋆
+m,i+1 = [x⋆
+i+1,y⋆
+i+1]T in (28). For example, if Cr
+is a rectangle region {[x,y]T|xL ≤x ≤xH,yL ≤y ≤yH},
+then the optimal solution for problem (P4-m) is given by [38]
+ri+1
+m = [Prec(x⋆
+i+1,xL,xH),Prec(y⋆
+i+1,yL,yH)]T, (35)
+where Prec(x,xL,xH) = min(max(x,xL),xH) is the projec-
+tion function associated with the rectangle region. Similarly,
+if Cr is a circle region {r|∥r −r0∥2 ≤D0}centered at point
+r0 with radius of D0, the optimal solution for problem (P4-m)
+can be written as
+ri+1
+m = Pcir(r⋆
+m,i+1 −r0,D0) + r0, (36)
+with the projector Pcir(r,D) = min(D/∥r∥2,1)r.
+Moreover, we denote ¯d = ΣHf(r) ∈ CLt. Then, we
+have ∥h(˜t,r)∥2
+2 = ∥¯d
+H
+G(˜t)∥2
+2 = ∑N
+n=1 |¯d
+H
+g(tn)|2. Given
+r and {tl,l ̸= n}N
+l=1, maximizing the channel total power in
+problem (P1-MISO) is equivalent to maximizing |¯d
+H
+g(tn)|2
+with respect to each tn. Thus, the subproblem for optimizing
+tn can be formulated similarly to problem (P3-n) by replacing
+Dn with ¯d¯d
+H
+.
+Therefore, we can obtain a locally optimal solution to (P1-
+MISO) by iteratively optimizing one variable in r ∪{tn}N
+n=1
+with the other N variables being ﬁxed at each time. This
+algorithm requires a complexity of O((NLr+Lrγ1
+r+Ltγ1
+t +
+N2.5 ln(1/β)γ2
+t)γ). It is noteworthy that the complexity of the
+alternative algorithm is lower compared to Algorithm 2 with
+M = 1. This is due to the explicit expression of the MISO
+channel capacity as a function of ˜t and r exclusively, thus
+eliminating the need of iteratively solving Q in the alternating
+optimization.
+Next, we consider the SIMO system with M >1 and N =
+1, where the ﬁeld response matrix of the transmit region G(˜t)
+can be rewritten as the vector g(t) ∈CLt with t representing
+the position of the transmit MA. The SIMO channel is thus
+given by h(t,˜r) = F(˜r)HΣg(t) ∈CM. It should be noted
+that for the case of N = 1, the optimal transmit covariance
+matrix is readily set as Q⋆ = P, leading to the corresponding
+channel capacity:
+CSIMO(t,˜r) = log2 det
+(
+IM + 1
+σ2 h(t,˜r)Qh(t,˜r)H
+)
+(e)
+= log2
+(
+1 + P
+σ2 ∥h(t,˜r)∥2
+2
+)
+, (37)
+where the equality marked by (e) holds because of det(Ip+
+AB) = det( Iq + BA) for A ∈Cp×q and B ∈Cq×p. It
+is notable that the capacity of SIMO channel given above
+takes a similar form to that of the MISO channel, which can
+be optimized by maximizing the total channel power. As a
+result, the alternating optimization algorithm proposed for the
+MISO scenario can be applied to the SIMO case as well with
+complexity O((Lrγ1
+r + M2.5 ln(1/β)γ2
+r + MLt + Ltγ1
+t)γ).
+IV. N UMERICAL RESULTS
+This section presents numerical results to assess the ef-
+fectiveness of the proposed algorithms for maximizing the
+capacity of the MA-enabled MIMO channel. In the simulation,
+we consider a MIMO system with N = 4 transmit MAs and
+M = 4 receive MAs. The transmit and receive regions are set
+as square areas with size A×A. We consider the geometry
+channel model, where the numbers of transmit and receive
+paths are the same, i.e., Lt = Lr. The path response matrix is
+assumed to be diagonal with Σ[1,1] ∼CN(0,κ/(κ+ 1)) and
+Σ[p,p] ∼CN (0,1/((κ+ 1)(Lr −1))) for p = 2,3,...,L r,
+where κ denotes the ratio of the average power for line-
+of-sight (LoS) paths to that for non-line-of-sight (NLoS)
+paths. The elevation and azimuth AoDs/AoAs are assumed
+to be i.i.d. variables with the uniform distribution over [0,π].
+The minimum distance between MAs is set as D = λ/2.
+The average SNR is deﬁned as P/σ2. We set convergence
+thresholds for the relative increment of the objective value as
+ϵ1 = ϵ2 = 10−3 in Sections III-B and III-D. All the results
+are averaged over 4 ×104 independent channel realizations.
+First, we set Lt = Lr = 5 , P/σ2 = 5 dB, A = 4 λ,
+κ = 1 , and show in Fig. 4 the convergence behavior of
+Algorithm 2 for different M and N. It is observed that the
+achievable rate monotonically increases and converges to a
+maximum value after 15 iterations for all values of M and N,
+which validates our analysis in Section III-D. Moreover, the
+converged achievable rate is increased by 48.2% as compared
+to that at the initial point for M = N = 2.
+Next, the performance of Algorithm 2 is compared with the
+following benchmark schemes:
+1) FPA: The transmitter and receiver are equipped with
+FPA-based ULAs with N and M antennas, respectively,
+spaced by λ/2. The MIMO channel capacity is obtained
+according to Section III-A with ﬁxed antenna positions.
+2) AS: The transmitter and receiver are equipped with FPA-
+based ULAs with 2N and 2M antennas, respectively,
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 11 ---
+11
+0 2 4 6 8 10 12 14 16 
+Iterations 
+3
+4
+5
+6
+7
+8
+9
+10 
+11 
+12 Achievable rate (bps/Hz) 
+ M=N= 2
+ M=N= 4
+ M=N= 6
+Fig. 4. Convergence behavior of Algorithm 2.
+spaced by λ/2, where N transmit antennas and M
+receive antennas are selected via exhaustive search to
+maximize the channel capacity [39].
+3) Strongest eigenchannel power maximization (SEPM):
+The simpliﬁed algorithm presented in Section III-F
+tailored for the low-SNR regime.
+4) Receive MA (RMA) : The transmitter is equipped with
+an FPA-based ULA same as the FPA scheme, while
+the receiver employs M MAs [1]. Since {tn}N
+n=1 are
+constant with the FPA-based ULA, we only need to
+alternately optimize {rm}M
+m=1 ∪Q in Algorithm 2.
+5) Alternating position selection (APS) : The trans-
+mit/receive area is quantized into discrete locations with
+equal-distance D = λ/2. The proposed Algorithm 2 is
+applied, where problems (P2-m) and (P3-n) are solved
+by exhaustive search over discrete locations for each
+transmit/receive MA. Note that it is difﬁcult to perform
+exhaustive search over all possible transmit and receive
+MAs’ positions due to the prohibitive computational
+complexity. For example, considering N = M = 4
+MAs in the 4λ×4λ transmit/receive region, the num-
+ber of total channel matrices for exhaustive search is(81
+4
+)2
+= 2.77 ×1012. As a result, we use Algorithm 2
+to alternately select transmit and receive MA positions
+for lower complexity.
+6) Random position (RP) : Randomly generate ˜t and ˜r
+satisfying (9b), (9c), (9d), and (9e) for 2500 indepen-
+dent realizations. Obtain the channel capacity in (8) by
+optimizing Q with given ˜t and ˜r for each realization,
+and select ˜t and ˜r with the largest capacity.
+7) RULA [13], [14]: The transmitter and receiver are
+equipped with RULAs with N and M antennas, re-
+spectively, spaced by λ/2. The rotation of the trans-
+mit/receive RULA is quantized into 50 discrete angles,
+where the optimal transmit/receive rotated angle is se-
+lected from 50 ×50 = 2500 pairs to achieve the largest
+capacity.
+We consider two SNR values of −15 dB and 25 dB corre-
+sponding to the low-SNR and high-SNR regimes, respectively.
+1 1.2 1.4 1.6 1.8 2 2.2 2.4 2.6 2.8 3
+Normalized region size A/ 
+0.4 
+0.5 
+0.6 
+0.7 
+0.8 
+0.9 
+1
+1.1 
+1.2 Achievable rate (bps/Hz) 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+(a) Achievable rate versus normalized region size.
+1 1.2 1.4 1.6 1.8 2 2.2 2.4 2.6 2.8 3
+Normalized region size A/ 
+10 
+15 
+20 
+25 
+30 
+35 
+40 Strongest eigenchannel power 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+(b) Strongest eigenchannel power versus normalized region size.
+Fig. 5. Performance of MA-enabled MIMO communication in the low-SNR
+regime.
+We set Lt = Lr = 5, κ = 1 [40]. We show the achievable
+rate versus the normalized region size A/λ for the proposed
+MA-enabled MIMO system and the benchmark schemes in
+Fig. 5(a) and Fig. 6(a). For both SNR regimes, it is shown
+that the proposed, RMA, APS and RP schemes with MAs
+outperform FPA systems in terms of achievable rate, and the
+performance gain increases with the region size. Moreover, all
+schemes converge when the normalized region size is larger
+than 4, which indicates that the maximum achievable rate of
+MA-enabled MIMO systems can be achieved with ﬁnite trans-
+mit and receive regions. It is also observed that our proposed
+algorithm achieves the best performance among all schemes
+in both low-SNR regime and high-SNR regime for any region
+size. With P/σ2 = 25 dB and A/λ= 3, the proposed scheme
+achieves 29.4%, 21.4%, 55.9%, 12.3%, 2.3%, 6.9%, and 6.5%
+performance improvements over the FPA, AS, SEPM, RMA,
+APS, RP, and RULA schemes, respectively. Particularly, the
+proposed scheme with transmit and receive MAs outperforms
+the RMA scheme with only receive MAs, which shows the
+additional gain of jointly optimizing the transmit and receive
+MAs.
+Furthermore, in the low-SNR regime, Fig. 5(a) shows that
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 12 ---
+12
+1 1.5 2 2.5 3 3.5 4
+Normalized region size A/ 
+18 
+20 
+22 
+24 
+26 
+28 
+30 Achievable rate (bps/Hz) 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+(a) Achievable rate versus normalized region size.
+1 1.5 2 2.5 3 3.5 4
+Normalized region size A/ 
+15 
+20 
+25 
+30 
+35 
+40 Channel total power 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+(b) Channel total power versus normalized region size.
+1 1.5 2 2.5 3 3.5 4
+Normalized region size A/ 
+10 1
+10 2
+10 3
+Condition number 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+(c) Channel condition number versus normalized region size.
+Fig. 6. Performance of MA-enabled MIMO communication in the high-SNR
+regime.
+the SEPM algorithm achieves performance that is nearly
+identical to that of the proposed algorithm, which is consistent
+with the results presented in Section III-F. Thus, the SEPM
+scheme can be considered a low-complexity alternative to
+Algorithm 2 in the low-SNR regime. To gain more insight,
+we also present in Fig. 5(b) the average strongest eigen-
+channel power, max(diag( ˜Λ))2, for each scheme versus the
+normalized region size. It is shown that the performance gap
+of max(diag( ˜Λ))2 between MA and FPA schemes increases
+with the normalized region size. However, in the high-SNR
+regime shown in Fig. 6(a), the SEPM scheme achieves the
+lowest achievable rate. The reason is as follows. Note that
+the channel total power and channel condition number ζ =
+max(diag( ˜Λ))/min(diag( ˜Λ)) are two important parameters
+inﬂuencing the MIMO channel capacity in the high-SNR
+regime. Generally, the channel capacity increases with the
+channel total power and decreases with ζ [30]. From Fig. 6(b)
+and Fig. 6(c), we observe that although the SEPM scheme can
+achieve the highest channel total power, it has the largest ζ as
+well. In other words, the SEPM scheme concentrates most of
+the channel power on the strongest eigenchannel but sacriﬁces
+the performance of the other eigenchannels, and thus the
+achievable rate is inferior as compared to other schemes in the
+high-SNR regime. It can be also observed that the channel total
+power of the proposed Algorithm 2 increases with the normal-
+ized region size and is higher than those of the FPA, APS, RP,
+and RULA schemes. Besides, the condition number of the
+proposed Algorithm 2 decreases with the normalized region
+size and is smaller than those of the FPA, AS, RMA, APS, RP,
+and RULA schemes. The higher channel total power and lower
+condition number yield more balanced power distribution over
+different eigenchannels of the MIMO channel, thus leading to
+a achievable rate gain over other schemes. The above results
+indicate that the proposed MA-enabled system can achieve
+signiﬁcantly higher achievable rate over the conventional FPA-
+based MIMO systems by exploring more DoFs in the spatial
+domain via antenna position optimization, and our proposed
+Algorithm 2 is able to reshape the MIMO channel matrix into
+a more favorable condition for achievable-rate maximization.
+Then, we consider a setup with A = 3 λ and two dif-
+ferent numbers of channel paths with Lt = Lr = 3 and
+Lt = Lr = 6 , respectively. Fig. 7 illustrates the achievable
+rate of the proposed and benchmark schemes versus SNR. It
+is shown that with the same SNR, the proposed algorithm can
+achieve larger achievable rate as compared to the schemes with
+FPAs. For the case with P/σ2 = 15 dB and Lt = Lr = 6,
+the proposed scheme has 30.3%, 21.8%, 41.9%, 10.1%, 2.8%,
+8.8%, and 7.8% performance improvements over the FPA, AS,
+SEPM, RMA, APS, RP, and RULA schemes, respectively.
+Furthermore, it is shown in Fig. 7 that our proposed and
+SEPM algorithms have almost the same performance when
+SNR is smaller than −5 dB, indicating that the SNR threshold
+of −5 dB guarantees that the proposed algorithm can be
+approximated by the SEPM scheme in the low-SNR regime.
+Moreover, for both two cases with different numbers of
+channel paths, the proposed, RMA, APS, and RP schemes
+yield a larger achievable rate compared to the FPA and AS
+schemes with FPAs, and the achievable rate gap increases with
+the number of channel paths. This is because the small-scale
+fading becomes stronger as the number of paths increases,
+and thus the achievable rate has more signiﬁcant ﬂuctuation
+in the transmit/receive region, which provides more DoFs on
+increasing the achievable rate for our proposed MA-enabled
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 13 ---
+13
+-15 -10 -5 0 5 10 15 
+SNR (dB) 
+0
+5
+10 
+15 Achievable rate (bps/Hz) 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA -5 0 5
+2
+4
+6
+8
+(a) Lr = Lt = 3.
+-15 -10 -5 0 5 10 15 
+SNR (dB) 
+0
+2
+4
+6
+8
+10 
+12 
+14 
+16 
+18 Achievable rate (bps/Hz) 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA -5 0 5
+2
+4
+6
+8
+10 
+(b) Lr = Lt = 6.
+Fig. 7. Achievable rate versus SNR for MA-enabled MIMO communication.
+MIMO systems.
+Furthermore, Fig. 8 shows the achievable rate of different
+schemes versus M(N). We set Lt = Lr = 5 , P/σ2 = 5
+dB, A = 4λ, κ = 1, and M = N. Under the same M(N),
+it is observed again that the proposed algorithm can achieve
+larger achievable rate as compared to the schemes with FPAs.
+For M = N = 6 , the proposed scheme achieves 23.6%,
+19.3%, 30.1%, 8.0%, 0.8%, 8.4%, and 6.0% performance
+improvements over the FPA, AS, SEPM, RMA, APS, RP,
+and RULA schemes, respectively. Moreover, we can see that
+although the number of parallel data steams is no greater
+than rank (H(˜t,˜r)) ≤min (Lt,Lr) = 5 , the achievable rate
+of the proposed algorithm increases with M(N) > 5. This
+is because the total channel power gain increases with the
+channel dimensions, M(N), and thus larger achievable rate
+can be achieved with increasing M(N) even for ﬁxed-rank
+channels.
+Finally, we show the achievable rate of the MA and FPA
+systems versus SNR for different precoding/combining ar-
+chitectures in Fig. 9. We consider the setup with A = 4 λ,
+Lt = Lr = 5 , κ = 1 , M = N = 6 and K = 3 RF
+chains. We consider three precoding/combining architectures:
+2 3 4 5 6 7 8
+ M  ( N)
+2
+4
+6
+8
+10 
+12 
+14 Achievable rate (bps/Hz) 
+Proposed 
+FPA 
+AS 
+SEPM
+RMA 
+APS
+RP 
+RULA 
+Fig. 8. Achievable rate versus M(N) for MA-enabled MIMO commu-
+nication.
+-15 -10 -5 0 5 10 15 
+SNR (dB) 
+0
+2
+4
+6
+8
+10 
+12 
+14 
+16 
+18 
+20 Achievable rate (bps/Hz) 
+MA-FD
+MA-AP
+MA-HP
+FPA-FD 
+FPA-AP 
+FPA-HP 
+Fig. 9. Achievable rate versus SNR for different precoding/combining
+architectures.
+i) FD: let V ∈ CN×K and U ∈ CM×K denote the
+ﬁrst K columns of ˜V and ˜U, respectively. Deﬁne P ≜
+diag([
+√
+p⋆
+1,
+√
+p⋆
+2,..., √p⋆
+K]) ∈ CK×K. Then, the digital
+transmit precoding matrix and receive combining matrix are
+set as T⋆ = V P ∈CN×K and R⋆ = U ∈CM×K, respec-
+tively. ii) AP [9]: the transmitter employs a diagonal power
+allocation matrix and an AP matrix, resulting in the equivalent
+precoding matrix as ej∠V P/
+√
+N; and the receiver employs
+an analog combining matrix as ej∠U
+H
+. iii) HP [10]: the
+transmitter employs an AP matrix TRF = ej∠T⋆
+and a digital
+precoding matrix TBB =
+√
+PT†
+RFT⋆/∥TRFT†
+RFT⋆∥F; and
+the receiver employs an analog combining matrix RRF =
+ej∠R⋆
+and a digital combining matrix RBB = R⋆R†
+RF. The
+equivalent transmit precoding matrix and receive combining
+matrix are TRFTBB and RBBRRF, respectively. As shown
+in Fig. 9, for all precoding/combining architectures, the pro-
+posed scheme with MAs outperforms FPA systems in terms
+of achievable rate. For P/σ2 = 5 dB, the achievable rate
+of the MA-AP system is increased by 16.5%, 25.8%, and
+23.0% as compared to that of the FPA-FD, FPA-AP, and FPA-
+HP systems, respectively. Therefore, MAs can be equipped in
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 14 ---
+14
+HP/AP architectures to reduce the RF chain cost, while higher
+achievable rate can be achieved compared to the FPA systems.
+V. C ONCLUSIONS
+In this paper, we proposed a new MA-enabled MIMO sys-
+tem to increase the channel capacity by exploiting the antenna
+position optimization at the transmitter and receiver. We stud-
+ied the capacity maximization problem for MA-enabled point-
+to-point MIMO communication, via the joint optimization of
+the transmit and receive MA positions as well as transmit
+covariance matrix. An alternating optimization algorithm was
+proposed to ﬁnd a locally optimal solution by iteratively
+optimizing the position of each transmit/receive MA and the
+transmit covariance matrix with the other variables being ﬁxed.
+Moreover, alternative algorithms of lower complexity were
+also proposed for the asymptotically low-SNR regime as well
+as MISO/SIMO channels. Numerical results showed that our
+proposed system and algorithm achieve signiﬁcantly higher
+capacity over the conventional FPAs-based MIMO systems
+with/without AS in multi-path environment, especially when
+the transmit/receive region is sufﬁciently large. Moreover, it
+was revealed that by jointly optimizing transmit and receive
+MA positions, the MIMO channel power can be signiﬁcantly
+improved while the condition number of the MIMO channel
+decreases, thus leading to more favorable MIMO channel
+realizations for enhancing the capacity.
+APPENDIX
+A. Derivations of ∇¯g(rm) and ∇2¯g(rm)
+For ease of exposition, we deﬁne
+b ≜ Bmf(ri
+m) ∈CLr. (38)
+Further denote the qth entry of b as bq = |bq|ej∠bq, with
+amplitude |bq|and phase ∠bq. Thus, ¯g(rm) can be written as
+¯g(rm) = Re
+{
+bHf(rm)
+}
+(39)
+= Re
+{Lr∑
+q=1
+|bq|ej(2π
+λ (xr,msin θq
+rcos φq
+r+yr,mcos θq
+r)−∠bq)
+}
+=
+Lr∑
+q=1
+|bq|cos (κq(rm)) ,
+with κq(rm) ≜ 2πρq
+r(rm)/λ −∠bq. Recalling that rm =
+[xr,m,yr,m]T, the gradient vector and Hessian matrix of ¯g(rm)
+over rm can be represented as ∇¯g(rm) =
+[
+∂¯g(rm)
+∂xr,m
+,∂¯g(rm)
+∂yr,m
+]T
+and ∇2¯g(rm) =
+[ ∂¯g(rm)
+∂xr,m∂xr,m
+∂¯g(rm)
+∂xr,m∂yr,m
+∂¯g(rm)
+∂yr,m∂xr,m
+∂¯g(rm)
+∂yr,m∂yr,m
+]
+, respectively.
+Thus, we have
+∂¯g(rm)
+∂xm
+= −2π
+λ
+Lr∑
+q=1
+|bq|sin θq
+r cos φq
+rsin (κq(rm)) ,
+∂¯g(rm)
+∂ym
+= −2π
+λ
+Lr∑
+q=1
+|bq|cos θq
+r sin (κq(rm)) , (40)
+and
+∂¯g(rm)
+∂xm∂xm
+= −4π2
+λ2
+Lr∑
+q=1
+|bq|sin2 θq
+r cos2 φq
+rcos (κq(rm)) ,
+∂¯g(rm)
+∂xm∂ym
+= −4π2
+λ2
+Lr∑
+q=1
+|bq|sin θq
+r cos φq
+rcos θq
+r cos (κq(rm)) ,
+∂¯g(rm)
+∂ym∂xm
+= −4π2
+λ2
+Lr∑
+q=1
+|bq|sin θq
+r cos φq
+rcos θq
+r cos (κq(rm)) ,
+∂¯g(rm)
+∂ym∂ym
+= −4π2
+λ2
+Lr∑
+q=1
+|bq|cos2 θq
+r cos (κq(rm)) . (41)
+B. Construction of δm
+Based on the deﬁnition of ∇2¯g(rm) in Appendix A, we
+have
+∥∇2¯g(rm)∥2
+2 ≤∥∇2¯g(rm)∥2
+F (42)
+=
+( ∂¯g(rm)
+∂xr,m∂xr,m
+)2
++
+( ∂¯g(rm)
+∂xr,m∂yr,m
+)2
++
+( ∂¯g(rm)
+∂yr,m∂xr,m
+)2
++
+( ∂¯g(rm)
+∂yr,m∂yr,m
+)2
+≤4
+(
+4π2
+λ2
+Lr∑
+q=1
+|bq|
+)2
+.
+Since ∥∇2¯g(rm)∥2I2 ⪰∇2¯g(rm), we can select δm as
+δm = 8π2
+λ2
+Lr∑
+q=1
+|bq|, (43)
+satisfying δm ≥ ∥∇2¯g(rm)∥2, and thus we have δmI2 ⪰
+∇2¯g(rm).
+REFERENCES
+[1] W. Ma, L. Zhu, and R. Zhang, “Capacity maximization for movable
+antenna enabled MIMO communication,” in Proc. IEEE ICC, Rome,
+Italy, 2023.
+[2] W. Jiang, B. Han, M. A. Habibi, and H. D. Schotten, “The road towards
+6G: A comprehensive survey,” IEEE Open J. Commun. Soc., vol. 2, pp.
+334–366, Feb. 2021.
+[3] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+Applications, trends, technologies, and open research problems,” IEEE
+Netw., vol. 34, no. 3, pp. 134–142, May 2020.
+[4] M. Z. Chowdhury, M. Shahjalal, S. Ahmed, and Y . M. Jang, “6G wire-
+less communication systems: Applications, requirements, technologies,
+challenges, and research directions,”IEEE Open J. Commun. Soc., vol. 1,
+pp. 957–975, 2020.
+[5] L. Zhu, J. Zhang, Z. Xiao, X. Cao, D. O. Wu, and X. Xia, “Millimeter-
+wave NOMA with user grouping, power allocation and hybrid beam-
+forming,” IEEE Trans. Wireless Commun., vol. 18, no. 11, pp. 5065–
+5079, Nov. 2019.
+[6] L. Lu, G. Y . Li, A. L. Swindlehurst, A. Ashikhmin, and R. Zhang,
+“An overview of massive MIMO: Beneﬁts and challenges,” IEEE J.
+Sel. Topics Signal Process., vol. 8, no. 5, pp. 742–758, Oct. 2014.
+[7] S. Sanayei and A. Nosratinia, “Antenna selection in MIMO systems,”
+IEEE Commun. Mag., vol. 42, no. 10, pp. 68–73, Oct. 2004.
+[8] M. Gharavi-Alkhansari and A. B. Gershman, “Fast antenna subset
+selection in MIMO systems,”IEEE Trans. Signal Process., vol. 52, no. 2,
+pp. 339–347, Feb. 2004.
+[9] X. Zhang, A. F. Molisch, and S.-Y . Kung, “Variable-phase-shift-based
+RF-baseband codesign for MIMO antenna selection,”IEEE Trans. Signal
+Process., vol. 53, no. 11, pp. 4091–4103, Nov. 2005.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 15 ---
+15
+[10] A. Kaushik, J. Thompson, E. Vlachos, C. Tsinos, and S. Chatzinotas,
+“Dynamic RF chain selection for energy efﬁcient and low complexity
+hybrid beamforming in millimeter wave MIMO systems,” IEEE Trans.
+Green Commun. Netw., vol. 3, no. 4, pp. 886–900, Jul. 2019.
+[11] Y . Teng, Y . Zhao, M. Wei, A. Liu, and V . K. Lau, “Sparse hybrid
+precoding for power minimization with an adaptive antenna structure
+in massive MIMO systems,” IEEE Trans. Wireless Commun., vol. 21,
+no. 7, pp. 5279–5292, Jul. 2022.
+[12] X. Zhu, Z. Wang, L. Dai, and Q. Wang, “Adaptive hybrid precoding
+for multiuser massive MIMO,” IEEE Commun. Lett., vol. 20, no. 4, pp.
+776–779, Apr. 2016.
+[13] H. Do, N. Lee, and A. Lozano, “Reconﬁgurable ULAs for line-of-sight
+MIMO transmission,” IEEE Trans. Wireless Commun., vol. 20, no. 5,
+pp. 2933–2947, May 2021.
+[14] H. Do, S. Cho, J. Park, H.-J. Song, N. Lee, and A. Lozano, “Terahertz
+line-of-sight MIMO communication: Theory and practical challenges,”
+IEEE Commun. Magazine, vol. 59, no. 3, pp. 104–109, Mar. 2021.
+[15] K.-K. Wong, A. Shojaeifard, K.-F. Tong, and Y . Zhang, “Fluid antenna
+systems,”IEEE Trans. Wireless Commun., vol. 20, no. 3, pp. 1950–1962,
+Mar. 2021.
+[16] K.-K. Wong and K.-F. Tong, “Fluid antenna multiple access,” IEEE
+Trans. Wireless Commun., vol. 21, no. 7, pp. 4801–4815, Jul. 2022.
+[17] Z. Zhang and L. Dai, “Pattern-division multiplexing for continuous-
+aperture MIMO,” in Proc. IEEE ICC, Seoul, Korea, Republic of, May
+2022, pp. 1–6.
+[18] C. Huang, S. Hu, G. C. Alexandropoulos, A. Zappone, C. Yuen,
+R. Zhang, M. D. Renzo, and M. Debbah, “Holographic MIMO surfaces
+for 6G wireless networks: Opportunities, challenges, and trends,” IEEE
+Trans. Wireless Commun., vol. 27, no. 5, pp. 118–125, Oct. 2020.
+[19] A. Pizzo, L. Sanguinetti, and T. L. Marzetta, “Fourier plane-wave
+series expansion for holographic MIMO communications,” IEEE Trans.
+Wireless Commun., vol. 21, no. 9, pp. 6890–6905, Sep. 2022.
+[20] N. Decarli and D. Dardari, “Communication modes with large intelligent
+surfaces in the near ﬁeld,” IEEE Access, vol. 9, pp. 165 648–165 666,
+Dec. 2021.
+[21] R. Deng, B. Di, H. Zhang, Y . Tan, and L. Song, “Reconﬁgurable
+holographic surface: Holographic beamforming for metasurface-aided
+wireless communications,” IEEE Trans. Veh. Technol., vol. 70, no. 6,
+pp. 6255–6259, Jun. 2021.
+[22] L. Wei, C. Huang, G. Alexandropoulus, W. E. Sha, Z. Zhang, M. Deb-
+bah, and C. Yuen, “Multi-user holographic MIMO surfaces: Channel
+modeling and spectral efﬁciency analysis,” IEEE J. Sel. Top. Signal
+Process., vol. 16, no. 5, pp. 1112–1124, Aug. 2022.
+[23] T. Ismail and M. Dawoud, “Null steering in phased arrays by controlling
+the elements positions,”IEEE Trans. Antennas Propagat., vol. 39, no. 11,
+pp. 1561–1566, Nov. 1991.
+[24] S. Basbug, “Design and synthesis of antenna array with movable
+elements along semicircular paths,” IEEE Antennas Wireless Propag.
+Lett., vol. 16, pp. 3059–3062, Oct. 2017.
+[25] A. Zhuravlev, V . Razevig, S. Ivashov, A. Bugaev, and M. Chizh,
+“Experimental simulation of multi-static radar with a pair of separated
+movable antennas,” inProc. IEEE COMCAS, Tel Aviv, Israel, Nov. 2015,
+pp. 1–5.
+[26] L. Zhu, W. Ma, and R. Zhang, “Movable antennas for wireless communi-
+cation: Opportunities and challenges,” arXiv preprint arXiv:2306.02331,
+2023.
+[27] ——, “Modeling and performance analysis for movable antenna enabled
+wireless communications,” arXiv preprint arXiv:2210.05325, 2022.
+[28] L. Zhu, W. Ma, B. Ning, and R. Zhang, “Movable-antenna enhanced
+multiuser communication via antenna position optimization,” arXiv
+preprint arXiv:2302.06978, 2023.
+[29] W. Ma, L. Zhu, and R. Zhang, “Compressed sensing based chan-
+nel estimation for movable antenna communications,” arXiv preprint
+arXiv:2306.04333, 2023.
+[30] A. Goldsmith, Wireless Communications. Cambridge, U.K.: Cambridge
+Univ. Press, 2005.
+[31] K. B. Petersen and M. S. Pedersen, The Matrix Cookbook. Kgs. Lyngby,
+Denmark: Tech. Univ. Denmark, 2006.
+[32] Q. Wu, Y . Zeng, and R. Zhang, “Joint trajectory and communication
+design for multi-UA V enabled wireless networks,”IEEE Trans. Wireless
+Commun., vol. 17, no. 3, pp. 2109–2121, Mar. 2018.
+[33] J. R. Magnus and H. Neudecker, Matrix Differential Calculus With
+Applications in Statistics and Econometrics. Hoboken, NJ, USA: Wiley,
+1995.
+[34] B. A. Turlach and A. Weingessel, “quadprog: Functions to solve
+quadratic programming problems,” CRAN-Package quadprog, 2007.
+[35] A. Ben-Tal and A. Nemirovski, Lectures on Modern Convex Optimiza-
+tion: Analysis, Algorithms and Engineering Applications. Philadelphia,
+PA, USA: SIAM, 2001.
+[36] S. Zhang and R. Zhang, “Capacity characterization for intelligent
+reﬂecting surface aided MIMO communication,” IEEE J. Sel. Areas
+Commun., vol. 38, no. 8, pp. 1823–1838, Aug. 2020.
+[37] Packings of Equal Circles in Fixed-Sized Containers with Maxi-
+mum Packing Density, Accessed: Apr. 5, 2017. [Online]. Available:
+http://www.packomania.com.
+[38] M. Fu, Y . Zhou, Y . Shi, W. Chen, and R. Zhang, “UA V aided over-the-
+air computation,” IEEE Trans. Wireless Commun., vol. 21, no. 7, pp.
+4909–4924, Jul. 2022.
+[39] S. Sanayei and A. Nosratinia, “Capacity maximizing algorithms for
+joint transmit–receive antenna selection,” in Proc. IEEE ACSSC, Paciﬁc
+Grove, CA, USA, Nov. 2004, pp. 1773–1776.
+[40] 3GPP, “Study on channel model for frequency spectrum above 6 GHz,”
+3rd Generation Partnership Project (3GPP), TR 38.900 V14.2.0, Dec.
+2016.
+Wenyan Ma (Student Member, IEEE) (S’17) re-
+ceived the B.S. degree (Hons.) in information en-
+gineering and the M.S. degree in signal and infor-
+mation processing from the Southeast University,
+Nanjing, China, in 2017 and 2020, respectively.
+He is currently pursuing the Ph.D. degree with the
+Department of Electrical and Computer Engineering,
+National University of Singapore. His research inter-
+ests include movable antenna (MA)-enabled wireless
+communications, intelligent reﬂecting surface, and
+convex optimization. He was the recipient of the
+Outstanding Master’s Thesis Award from the Chinese Institute of Electronics
+in 2020, and the Best Paper Award from the Eleventh International Conference
+on Wireless Communications and Signal Processing in 2019. He was honored
+as the Exemplary Reviewer of the IEEE COMMUNICATIONS LETTERS in
+2019 and 2020.
+Lipeng Zhu (Member, IEEE) received the B.S.
+degree in the Department of Mathematics and Sys-
+tem Sciences from Beihang University in 2017, and
+the Ph.D. degree in the Department of Electronic
+and Information Engineering from Beihang Univer-
+sity in 2021. He is currently a Research Fellow
+with the Department of Electrical and Computer
+Engineering, National University of Singapore. His
+current research interests include movable antenna
+(MA)-enabled wireless communications, intelligent
+reﬂecting surface (IRS), millimeter-wave communi-
+cations, unmanned aerial vehicle (UA V) communications, and non-orthogonal
+multiple access (NOMA). He was a recipient of the Best Ph.D. Thesis
+Award from China Education Society of Electronics in 2022, the Best Ph.D.
+Thesis Award of Beijing in 2022, and the First Prize of Natural Science
+from Chinese Institute of Electronics. He served as a guest editor for China
+Communications. He was also a recipient of the Exemplary Reviewer of the
+IEEE Transactions on Communications.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 
+--- Page 16 ---
+16
+Rui Zhang (Fellow, IEEE) (S’00-M’07-SM’15-
+F’17) received the B.Eng. (ﬁrst-class Hons.) and
+M.Eng. degrees from the National University of
+Singapore, Singapore, and the Ph.D. degree from
+the Stanford University, Stanford, CA, USA, all in
+electrical engineering.
+From 2007 to 2009, he worked as a researcher
+at the Institute for Infocomm Research, ASTAR,
+Singapore. In 2010, he joined the Department of
+Electrical and Computer Engineering of National
+University of Singapore, where he was appointed
+as a Provost’s Chair Professor in 2020. Since 2022, he has joined the
+School of Science and Engineering, The Chinese University of Hong Kong,
+Shenzhen, as a Principal’s Diligence Chair Professor. He has published over
+300 journal papers and over 200 conference papers. He has been listed as
+a Highly Cited Researcher by Thomson Reuters/Clarivate Analytics since
+2015. His current research interests include UA V/satellite communications,
+wireless power transfer, intelligent reﬂecting surface, reconﬁgurable MIMO,
+radio mapping and optimization methods.
+He was the recipient of the 6th IEEE Communications Society Asia-Paciﬁc
+Region Best Young Researcher Award in 2011, the Young Researcher Award
+of National University of Singapore in 2015, the Wireless Communications
+Technical Committee Recognition Award in 2020, and the IEEE Signal Pro-
+cessing and Computing for Communications (SPCC) Technical Recognition
+Award in 2020. He received 14 IEEE Best Paper Awards, including the IEEE
+Marconi Prize Paper Award in Wireless Communications in 2015 and 2020,
+the IEEE Signal Processing Society Best Paper Award in 2016, the IEEE
+Communications Society Heinrich Hertz Prize Paper Award in 2017, 2020
+and 2022, the IEEE Communications Society Stephen O. Rice Prize in 2021,
+etc. He served for over 30 international conferences as the TPC co-chair or
+an organizing committee member. He was an elected member of the IEEE
+Signal Processing Society SPCOM Technical Committee from 2012 to 2017
+and SAM Technical Committee from 2013 to 2015, and served as the Vice
+Chair of the IEEE Communications Society Asia-Paciﬁc Board Technical
+Affairs Committee from 2014 to 2015. He was a Distinguished Lecturer
+of IEEE Signal Processing Society and IEEE Communications Society from
+2019 to 2020. He served as an Editor for the IEEE TRANSACTIONS ON
+WIRELESS COMMUNICATIONS from 2012 to 2016, the IEEE JOURNAL
+ON SELECTED AREAS IN COMMUNICATIONS: Green Communications
+and Networking Series from 2015 to 2016, the IEEE TRANSACTIONS ON
+SIGNAL PROCESSING from 2013 to 2017, the IEEE TRANSACTIONS ON
+GREEN COMMUNICATIONS AND NETWORKING from 2016 to 2020,
+and the IEEE TRANSACTIONS ON COMMUNICATIONS from 2017 to
+2022. He served as a member of the Steering Committee of the IEEE Wireless
+Communications Letters from 2018 to 2021. He is a Fellow of the Academy
+of Engineering Singapore.
+This article has been accepted for publication in IEEE Transactions on Wireless Communications. This is the author's version which has not been fully edited and 
+content may change prior to final publication. Citation information: DOI 10.1109/TWC.2023.3307696
+© 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Beijing Jiaotong University. Downloaded on March 21,2024 at 06:21:45 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,40 @@
+# Paper Reading Protocol & Implementation Rules
+
+You are an intelligent coding assistant helping with research implementation. You must adhere to the following rules when working with research papers and simulations.
+
+## 1. Paper Reading Protocol (CRITICAL)
+
+Before proposing or writing any new simulation scripts based on a research paper:
+
+1.  **Locate and Verify**:
+    *   Check `papers/` for the PDF.
+    *   If missing, explicitly ask the user to provide it.
+
+2.  **Analyze Requirements**:
+    *   Identify the specific Figure (e.g., Fig. 5) to reproduce.
+    *   **Extract Parameters**:
+        *   X-axis & Y-axis definitions/units.
+        *   System Setup: Antenna count ($N, M$), Number of paths ($L_t, L_r$), SNR.
+        *   Schemes to compare (e.g., Fixed Position, RMA only, TMA only, Proposed).
+    
+3.  **Confirm Before Coding**:
+    *   State your understanding of the simulation setup to the user.
+    *   Ask: "Does this setup match the figure you want to reproduce?"
+    *   DO NOT generate code until the user confirms or corrects parameters.
+
+## 2. Coding Standards for Simulations
+
+*   **Modular Design**: Keep core logic (system model, optimization algorithms) separate from plotting/simulation scripts.
+    *   Example: `mimo_optimized.py` (Logic) vs `mimo_comparison.py` (Run & Plot).
+*   **Reproducibility**:
+    *   Set random seeds where appropriate.
+    *   Include comments citing specific equations or algorithms from the paper (e.g., "Implements Eq. (12)").
+*   **Visualization**:
+    *   Use academic plotting styles (serif fonts, clear legends, grid lines).
+    *   Label axes clearly with units.
+
+## 3. Context Awareness
+
+*   Always check existing files (`.py`, `README.md`) to see what has already been implemented.
+*   If an existing script (e.g., `mimo_comparison.py`) mentions specific Figures (e.g., "Fig. 6"), use it as a reference for parameter tuning.
+

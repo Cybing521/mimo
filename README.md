@@ -29,34 +29,40 @@ pip install -r requirements.txt
 ```
 
 ### 2. 运行仿真
-运行优化后的脚本以复现论文结果：
 
+我们提供了便捷的命令行工具 `mimo_comparison.py`，支持自定义 SNR、试验次数和 CPU 核心数。
+
+**复现论文 Fig. 5 (低信噪比场景, SNR=-15dB):**
 ```bash
-# 默认运行（100次试验，快速验证）
-python mimo_optimized.py
-
-# 自定义运行（1000次试验，4个进程，复现论文曲线）
-python mimo_optimized.py 1000 4
+# 运行 50 次试验，使用 4 个 CPU 核心
+python mimo_comparison.py --snr -15 --trials 50 --cores 4
 ```
+*说明：低信噪比下，扫描范围自动调整为 $A/\lambda \in [1, 3]$。*
 
-### 3. 参数配置指南
-若需复现论文中的不同场景（如低/高信噪比），请直接修改 `mimo_optimized.py` 中的相关参数：
+**复现论文 Fig. 6 (高信噪比场景, SNR=25dB):**
+```bash
+# 默认参数 (SNR=25, Trials=50)
+python mimo_comparison.py
 
-```python
-# 修改 mimo_optimized.py
-
-# 1. 修改信噪比 (SNR)
-SNR_dB = 5   # 低信噪比 (Low SNR)
-SNR_dB = 25  # 高信噪比 (High SNR, Fig. 6)
-
-# 2. 修改散射体数量
-Lt, Lr = 10, 10  # 调整散射体环境
-
-# 3. 修改区域大小范围
-A_lambda_values = np.arange(1, 5, 0.5)  # 调整扫描范围
+# 自定义高精度运行
+python mimo_comparison.py --snr 25 --trials 500 --cores 8
 ```
+*说明：高信噪比下，扫描范围自动调整为 $A/\lambda \in [1, 4]$。*
 
-### 4. 查看结果
+### 3. 参数详解
+| 参数 | 说明 | 默认值 |
+|---|---|---|
+| `--snr` | 信噪比 (dB)。<0 时为低信噪比模式，>=0 时为高信噪比模式。 | 25 |
+| `--trials` | 蒙特卡洛试验次数。次数越多曲线越平滑，但耗时越长。 | 50 |
+| `--cores` | 并行计算使用的 CPU 核心数。不指定则自动使用最大可用核数 (上限 8)。 | 自动 |
+
+### 4. 核心代码说明
+- **`mimo_comparison.py`**: 主入口脚本，负责参数调度、并行计算和绘图。
+- **`mimo_optimized.py`**: 算法核心实现，包含 `MIMOSystem` 类和优化算法逻辑。
+
+若需手动修改更底层的仿真参数（如修改散射体数量或自定义场景），请直接编辑 `mimo_comparison.py` 文件中的参数设置部分。
+
+### 5. 查看结果
 运行结束后，结果将自动保存至 `results/` 目录：
 - **PNG**: 包含容量、功率和条件数的图表。
 - **CSV**: 详细的数值数据。
