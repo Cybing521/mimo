@@ -45,16 +45,16 @@ def main():
     # 参数设置
     num_trials = args.trials
     # 如果用户没有指定 cores，则使用默认逻辑（最多8核）
-    num_cores = args.cores if args.cores is not None else min(8, cpu_count())
+    num_cores = args.cores if args.cores is not None else min(10, cpu_count())
     SNR_dB = args.snr
 
     # 根据 SNR 自动调整扫描范围 (复现论文逻辑)
     # Low-SNR 通常扫描范围较小 (1-3)，High-SNR 扫描范围较大 (1-4)
     if SNR_dB < 0:
-        A_lambda_values = np.arange(1, 3.1, 0.5)
+        A_lambda_values = np.arange(1, 3.1, 0.2)
         print(f"Configuration: Low-SNR Regime (SNR={SNR_dB}dB)")
     else:
-        A_lambda_values = np.arange(1, 4.1, 0.5)
+        A_lambda_values = np.arange(1, 4.1, 0.2)
         print(f"Configuration: High-SNR Regime (SNR={SNR_dB}dB)")
     
     # 固定散射体参数 (论文标准)
