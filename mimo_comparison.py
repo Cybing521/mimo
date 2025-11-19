@@ -49,10 +49,10 @@ def main():
     
     # 自动调整 A_lambda_values
     if SNR_dB < 0:
-        A_lambda_values = np.arange(1, 3.1, 0.2)
+        A_lambda_values = np.arange(1, 3.1, 0.5)
         print(f"Configuration: Low-SNR Regime (SNR={SNR_dB}dB)")
     else:
-        A_lambda_values = np.arange(1, 4.1, 0.2)
+        A_lambda_values = np.arange(1, 4.1, 0.5)
         print(f"Configuration: High-SNR Regime (SNR={SNR_dB}dB)")
 
     Lt, Lr = 5, 5
