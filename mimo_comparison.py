@@ -39,13 +39,13 @@ def main():
     parser.add_argument('--modes', nargs='+', default=['Proposed', 'RMA', 'TMA', 'FPA'], 
                       help='Modes to simulate (default: all)')
     args = parser.parse_args()
-d
+    
     # ... (参数设置保持不变) ...
     num_trials = args.trials
     # 如果用户没有指定 cores，则使用默认逻辑（最多8核）
-
     num_cores = args.cores if args.cores is not None else min(8, cpu_count())
     SNR_dB = args.snr
+
     
     # 自动调整 A_lambda_values
     if SNR_dB < 0:
