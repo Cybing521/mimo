@@ -30,18 +30,18 @@ pip install -r requirements.txt
 
 ### 2. 运行仿真
 
-我们提供了便捷的命令行工具 `mimo_comparison.py`，支持自定义 SNR、试验次数和 CPU 核心数。
+我们提供了便捷的命令行工具 `mimo_comparison.py`，支持自定义 SNR、试验次数、CPU 核心数以及仿真模式。
 
 **复现论文 Fig. 5 (低信噪比场景, SNR=-15dB):**
 ```bash
-# 运行 50 次试验，使用 4 个 CPU 核心
-python mimo_comparison.py --snr -15 --trials 50 --cores 4
+# 运行 50 次试验，使用 4 个 CPU 核心，仅对比 Proposed 和 RMA 方案
+python mimo_comparison.py --snr -15 --trials 50 --cores 4 --modes Proposed RMA
 ```
 *说明：低信噪比下，扫描范围自动调整为 $A/\lambda \in [1, 3]$。*
 
 **复现论文 Fig. 6 (高信噪比场景, SNR=25dB):**
 ```bash
-# 默认参数 (SNR=25, Trials=50)
+# 默认参数 (SNR=25, Trials=50, All Modes)
 python mimo_comparison.py
 
 # 自定义高精度运行
@@ -55,14 +55,21 @@ python mimo_comparison.py --snr 25 --trials 500 --cores 8
 | `--snr` | 信噪比 (dB)。<0 时为低信噪比模式，>=0 时为高信噪比模式。 | 25 |
 | `--trials` | 蒙特卡洛试验次数。次数越多曲线越平滑，但耗时越长。 | 50 |
 | `--cores` | 并行计算使用的 CPU 核心数。不指定则自动使用最大可用核数 (上限 8)。 | 自动 |
+| `--modes` | 指定要仿真的方案模式，空格分隔。可选值: `Proposed` `RMA` `TMA` `FPA` | 全部 |
 
-### 4. 核心代码说明
+### 4. 输出结果
+脚本运行结束后，会在 `results/` 目录下生成三张图表（文件名包含时间戳）：
+1. `capacity_*.png`: **Achievable Rate** (Fig. 5a/6a)
+2. `strongest_eigen_power_*.png`: **Strongest Eigenchannel Power** (Fig. 5b/6b)
+3. `total_power_*.png`: **Channel Total Power**
+
+### 5. 核心代码说明
 - **`mimo_comparison.py`**: 主入口脚本，负责参数调度、并行计算和绘图。
 - **`mimo_optimized.py`**: 算法核心实现，包含 `MIMOSystem` 类和优化算法逻辑。
 
 若需手动修改更底层的仿真参数（如修改散射体数量或自定义场景），请直接编辑 `mimo_comparison.py` 文件中的参数设置部分。
 
-### 5. 查看结果
+### 6. 查看结果
 运行结束后，结果将自动保存至 `results/` 目录：
 - **PNG**: 包含容量、功率和条件数的图表。
 - **CSV**: 详细的数值数据。
