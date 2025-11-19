@@ -167,5 +167,5 @@ temp/
 # capacity_optimized.png
 
 # 可选：排除大型结果数据文件
-# results/
-# output/
+results/
+output/
