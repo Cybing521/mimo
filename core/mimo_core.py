@@ -144,8 +144,22 @@ class MIMOSystem:
         
         return grad, delta
 
+    def initialize_antennas_fixed_ula(self, Count):
+        """
+        生成固定的均匀线阵 (ULA - Uniform Linear Array)
+        FPA 模式专用：间隔固定为 lambda/2，与区域大小 A 无关
+        """
+        r = np.zeros((2, Count))
+        # 沿 x 轴排列，间隔为 D (lambda/2)
+        for i in range(Count):
+            r[0, i] = i * self.D
+            r[1, i] = 0  # y 坐标固定为 0
+        # 将阵列中心移到原点附近
+        r[0, :] -= np.mean(r[0, :])
+        return r
+    
     def initialize_antennas_smart(self, Count, square_size):
-        """智能网格初始化"""
+        """智能网格初始化 (用于 MA 模式)"""
         grid_size = int(np.ceil(np.sqrt(Count)))
         spacing = square_size / (grid_size + 1)
         
@@ -229,9 +243,15 @@ class MIMOSystem:
         """
         square_size = A_lambda * self.lambda_val
         
-        # 初始化位置
-        r = self.initialize_antennas_smart(self.M, square_size)
-        t = self.initialize_antennas_smart(self.N, square_size)
+        # 初始化位置 - 根据模式选择初始化方式
+        if mode == 'FPA':
+            # FPA: 固定均匀线阵，与区域大小无关
+            r = self.initialize_antennas_fixed_ula(self.M)
+            t = self.initialize_antennas_fixed_ula(self.N)
+        else:
+            # MA 模式: 在区域内智能初始化
+            r = self.initialize_antennas_smart(self.M, square_size)
+            t = self.initialize_antennas_smart(self.N, square_size)
         
         # 信道参数
         theta_p = np.random.rand(self.Lt) * np.pi
