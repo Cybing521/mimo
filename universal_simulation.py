@@ -134,10 +134,12 @@ def main():
             pool_args = [(t, base_params, args.sweep_param, val, actual_mode) for t in range(args.trials)]
             
             with Pool(processes=args.cores) as pool:
-                # We don't need a progress bar for every single point if it's too fast, 
-                # but here it's slow enough to warrant one per value or one big one.
-                # Let's do one per value for clarity.
-                capacities = list(pool.imap(run_single_simulation, pool_args))
+                # Use tqdm to show progress bar for trials
+                # total=args.trials ensures the bar is scaled correctly
+                capacities = list(tqdm(pool.imap(run_single_simulation, pool_args), 
+                                     total=args.trials, 
+                                     desc=f"  Computing {args.sweep_param}={val}",
+                                     unit="trial"))
             
             valid_caps = [c for c in capacities if c is not None]
             avg_cap = np.mean(valid_caps) if valid_caps else 0
