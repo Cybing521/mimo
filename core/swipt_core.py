@@ -183,7 +183,8 @@ class SWIPTSystem:
             
             prob = cp.Problem(objective, constraints)
             try:
-                prob.solve(solver=cp.SCS, verbose=False)
+                # Enable warm_start and lower epsilon for speed
+                prob.solve(solver=cp.SCS, verbose=False, warm_start=True, eps=1e-3)
             except:
                 break
                 
@@ -282,7 +283,8 @@ class SWIPTSystem:
             
             prob = cp.Problem(objective, constraints)
             try:
-                prob.solve(solver=cp.SCS, verbose=False)
+                # Enable warm_start
+                prob.solve(solver=cp.SCS, verbose=False, warm_start=True, eps=1e-3)
             except:
                 break
                 

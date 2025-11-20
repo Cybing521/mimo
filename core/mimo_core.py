@@ -255,13 +255,30 @@ class MIMOSystem:
             G = self.calculate_G(theta_p, phi_p, t)
             H_r = F.T.conj() @ Sigma @ G
             
-            # 1. 功率分配 (CVX)
-            Q_var = cp.Variable((self.N, self.N), hermitian=True)
-            obj = cp.log_det(np.eye(self.M) + (1/self.sigma) * H_r @ Q_var @ H_r.T.conj())
+            # 1. 功率分配 (CVX - Optimized with Parameters)
+            # 将问题构建移到循环外（首次运行时构建），后续只更新参数
+            if not hasattr(self, '_cvx_prob_cache'):
+                self._Q_var = cp.Variable((self.N, self.N), hermitian=True)
+                self._Hr_param = cp.Parameter((self.M, self.N), complex=True)
+                
+                # 目标函数构建
+                # obj = log_det(I + 1/sigma * Hr @ Q @ Hr^H)
+                # 为了符合DCP规则，通常写为 log_det(I + 1/sigma * X)，其中 X = Hr @ Q @ Hr^H 
+                # 但 X 与 Q 的关系是仿射的，直接写通常没问题，或者用辅助变量
+                
+                # 直接写法在较新版本CVXPY中通常支持，或者使用 transform
+                term = (1.0/self.sigma) * (self._Hr_param @ self._Q_var @ self._Hr_param.H)
+                obj = cp.log_det(np.eye(self.M) + term)
+                
+                self._cvx_prob_cache = cp.Problem(cp.Maximize(obj), 
+                                                [cp.trace(self._Q_var) <= self.power, self._Q_var >> 0])
+            
+            # 更新参数并求解
+            self._Hr_param.value = H_r
             try:
-                prob = cp.Problem(cp.Maximize(obj), [cp.trace(Q_var) <= self.power, Q_var >> 0])
-                prob.solve(solver=cp.SCS, verbose=False, eps=1e-3)
-                Q = Q_var.value if prob.status in ['optimal', 'optimal_inaccurate'] else np.eye(self.N)*(self.power/self.N)
+                # 启用 warm_start，利用上一次的结果加速
+                self._cvx_prob_cache.solve(solver=cp.SCS, verbose=False, warm_start=True, eps=1e-3)
+                Q = self._Q_var.value if self._cvx_prob_cache.status in ['optimal', 'optimal_inaccurate'] else np.eye(self.N)*(self.power/self.N)
             except:
                 Q = np.eye(self.N)*(self.power/self.N)
                 
