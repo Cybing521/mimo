@@ -3,3 +3,8 @@ scipy==1.10.1
 cvxpy==1.4.1
 matplotlib==3.7.1
 tqdm>=4.65.0
+
+# Deep Reinforcement Learning dependencies
+torch>=2.0.0
+gym>=0.26.0
+tensorboard>=2.13.0
