@@ -8,3 +8,6 @@ tqdm>=4.65.0
 torch>=2.0.0
 gym>=0.26.0
 tensorboard>=2.13.0
+
+# test
+pytest>=4.15.0s

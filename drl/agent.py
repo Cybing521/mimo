@@ -90,6 +90,7 @@ class PPOAgent:
             'critic_loss': deque(maxlen=100),
             'entropy': deque(maxlen=100),
             'ratio': deque(maxlen=100),
+            'ratio_mean': deque(maxlen=100),
         }
     
     def select_action(

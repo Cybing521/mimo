@@ -62,6 +62,26 @@ python universal_simulation.py --sweep_param [参数名] --range [起始] [结�
 
 *(详情见上文参数详解...)*
 
+#### 🔁 推荐：复现 Ma Fig.6(a) **Proposed**（高 SNR）
+- **目标**：`A/λ = 1~4` 区域扫描，比较 `Proposed / SEPM / FPA`
+- **固定参数**：`N=M=4`, `Lt=Lr=5`, `SNR=25 dB`, `trials=50`, `κ=1`
+- **并行**：通过 `--cores` 指定 CPU 核心数（例如 `--cores 8`），内部 `multiprocessing.Pool` 会自动并行 trials
+- **命令**（注意 `np.arange` 的右开区间，`--range 1 4.5 0.5` 才能覆盖 4）：
+```bash
+python universal_simulation.py \
+    --sweep_param A \
+    --range 1 4.5 0.5 \
+    --N 4 --M 4 \
+    --Lt 5 --Lr 5 \
+    --SNR 25 \
+    --trials 50 \
+    --cores 8 \
+    --modes Proposed SEPM FPA
+```
+- **输出**：图像 & JSON 会写入 `results/universal_sweep_A_*.png/.json`，可直接用于 Fig.6(a)。
+
+> κ（Rician 因子）控制直射分量与散射分量的功率比，这里设为 1（等功率），与 Ma 2023 在 Fig.6 中的默认配置一致；该值在 `core/mimo_core.py` 内部设定，如需修改请在核心模型中调整。
+
 ### 3. 运行仿真 (Xiong 2017)
 
 使用 `swipt_simulation.py` 复现 Xiong 2017 的 Rate-Energy Region：
@@ -161,18 +181,27 @@ IEEE Transactions on Wireless Communications, 16(8), 5147-5161.
 **1. 训练DRL Agent**
 
 ```bash
-# 使用默认参数训练
+# 推荐配置（Ma Fig.6 对应环境，默认使用 GPU 如可用）
 python experiments/train_drl.py \
     --num_episodes 5000 \
     --N 4 --M 4 \
-    --SNR_dB 15 \
+    --Lt 5 --Lr 5 \
+    --SNR_dB 25 \
     --A_lambda 3.0 \
-    --save_dir results/drl_training
-
-# 使用GPU加速
-python experiments/train_drl.py \
+    --max_steps 50 \
+    --lr_actor 3e-4 \
+    --lr_critic 3e-4 \
+    --gamma 0.99 \
+    --gae_lambda 0.95 \
+    --clip_epsilon 0.2 \
+    --ppo_epochs 10 \
+    --batch_size 64 \
+    --entropy_coef 0.01 \
+    --eval_interval 100 \
+    --save_interval 500 \
+    --seed 42 \
     --device cuda \
-    --num_episodes 10000
+    --save_dir results/drl_training
 ```
 
 **2. 对比实验**

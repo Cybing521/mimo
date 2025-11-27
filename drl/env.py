@@ -299,8 +299,17 @@ class MAMIMOEnv(gym.Env):
         # 1. Channel eigenvalues (4 dims)
         H_HH = self.H_r @ self.H_r.T.conj()
         full_eigvals = np.linalg.eigvalsh(H_HH)
-        eigvals = np.sort(full_eigvals)[::-1][:4]  # Top 4
-        eigvals = eigvals / (np.max(eigvals) + 1e-8)  # Normalize
+        eigvals = np.sort(full_eigvals)[::-1]
+        if eigvals.size > 0:
+            eigvals = eigvals / (np.max(eigvals) + 1e-8)  # Normalize
+        else:
+            eigvals = np.zeros(4, dtype=np.float32)
+        if eigvals.size < 4:
+            padded = np.zeros(4, dtype=np.float32)
+            padded[:eigvals.size] = eigvals
+            eigvals = padded
+        else:
+            eigvals = eigvals[:4]
         
         # 2. Channel features (3 dims)
         channel_power = np.linalg.norm(self.H_r, 'fro')
