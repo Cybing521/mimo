@@ -6,8 +6,8 @@ This module implements a custom Gym environment for training DRL agents
 to optimize antenna positions in MA-MIMO systems.
 """
 
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 from typing import Dict, Tuple, Optional
 import sys
@@ -21,23 +21,23 @@ from core.mimo_core import MIMOSystem
 
 class MAMIMOEnv(gym.Env):
     """
-    Custom Gym Environment for MA-MIMO Optimization
-    
-    State Space:
-        - Channel eigenvalues (4 dims)
-        - Channel power, condition number, phase variance (3 dims)
-        - Transmit & receive antenna positions (2(N+M) dims)
-        - Capacity history (5 dims)
-        Total: 4 + 3 + 2(N+M) + 5 dims
-    
-    Action Space:
-        - Normalized position increments for Tx/Rx arrays ([-1, 1])
-        - Internally scaled to ±0.1λ per step
-    
-    Reward:
-        - Primary: Capacity
-        - Penalty: Constraint violations
-        - Bonus: Efficiency, smoothness
+    Custom Gym Environment for MA-MIMO Optimization.
+
+    🌐 状态空间（agent 看到的观测）：
+        - 4 个主特征值：近似表征信道的“通道等级”。
+        - 3 个统计量：信道功率、条件数、相位方差，帮助 agent 估计信道质量。
+        - 天线位置信息：Tx 和 Rx 各自的坐标，被展平成 2(N+M) 维。
+        - 5 条容量历史：短期性能回顾，可让 agent 感知走势。
+        → 总维度 4 + 3 + 2(N+M) + 5
+
+    🕹 动作空间：
+        - 输入为 [-1, 1] 区间的标准化位移。
+        - 内部再缩放到 ±0.1 λ，使一步移动不过大，便于稳定训练。
+
+    🏆 奖励设计：
+        - 以容量及容量提升为主奖励（更高/更快提升更好）。
+        - 对违反约束（越界、天线太近）给予惩罚。
+        - 额外加入效率奖励与平滑惩罚，防止“抽搐式”移动。
     """
     
     metadata = {'render.modes': ['human', 'rgb_array']}
@@ -68,7 +68,7 @@ class MAMIMOEnv(gym.Env):
         """
         super(MAMIMOEnv, self).__init__()
         
-        # System parameters
+        # System parameters（环境配置，决定信道和阵列规模）
         self.N = N
         self.M = M
         self.Lt = Lt
@@ -77,7 +77,7 @@ class MAMIMOEnv(gym.Env):
         self.A_lambda = A_lambda
         self.max_steps = max_steps
         
-        # Create MIMO system
+        # Create MIMO system（复用论文实现，保证与仿真设置一致）
         self.mimo_system = MIMOSystem(
             N=N, M=M, Lt=Lt, Lr=Lr, 
             SNR_dB=SNR_dB, lambda_val=1.0
@@ -105,7 +105,7 @@ class MAMIMOEnv(gym.Env):
             dtype=np.float32
         )
         
-        # State space dimension
+        # State space dimension（这里不直接依赖 gym.spaces.Dict，方便 PPO 处理向量）
         state_dim = 4 + 3 + 2*(N + M) + 5
         self.observation_space = spaces.Box(
             low=-np.inf,
@@ -119,7 +119,7 @@ class MAMIMOEnv(gym.Env):
         self.capacity_history = []
         self.capacity_normalizer = 30.0  # empirical upper bound
         
-        # Current state
+        # Current state（训练过程中持续更新）
         self.t = None  # Transmit antenna positions (2, N)
         self.r = None  # Receive antenna positions (2, M)
         self.Q = None  # Power allocation matrix
@@ -150,7 +150,7 @@ class MAMIMOEnv(gym.Env):
         self.current_step = 0
         self.capacity_history = []
         
-        # Reset per-episode channel parameters
+        # Reset per-episode channel parameters（每个 episode 抽样新的 Rician 信道）
         self._initialize_channel_params()
         
         # Compute initial channel and capacity
@@ -186,7 +186,7 @@ class MAMIMOEnv(gym.Env):
         new_t = self.t + tx_action
         new_r = self.r + rx_action
         
-        # Project to feasible region
+        # Project to feasible region（软投影，避免动作“闯红灯”）
         new_t = self._project_to_feasible_region(new_t, self.t, is_transmit=True)
         new_r = self._project_to_feasible_region(new_r, self.r, is_transmit=False)
         self.t = new_t
@@ -195,7 +195,7 @@ class MAMIMOEnv(gym.Env):
         # Update channel and compute new capacity
         self._update_channel()
         
-        # Compute reward
+        # Compute reward（包含奖励与惩罚的混合信号）
         reward = self._compute_reward(prev_capacity, prev_t, prev_r)
         
         # Update tracking

@@ -17,6 +17,9 @@ class ActorNetwork(nn.Module):
     Actor Network (Policy Network)
     
     Outputs Gaussian policy: π(a|s) = N(μ(s), σ(s))
+    
+    📌 对应直觉：给定“当前信道+天线位置”，网络输出每个动作维度的
+    平均值与方差；采样后的增量会被环境再缩放到 ±0.1λ。
     """
     
     def __init__(
@@ -42,7 +45,7 @@ class ActorNetwork(nn.Module):
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
         
-        # Shared layers
+        # Shared layers（采用 LayerNorm + ReLU，提升数值稳定性）
         layers = []
         prev_dim = state_dim
         for hidden_dim in hidden_dims:
@@ -53,7 +56,7 @@ class ActorNetwork(nn.Module):
         
         self.shared = nn.Sequential(*layers)
         
-        # Mean head
+        # Mean head（tanh 保证均值 ∈ [-1, 1]）
         self.mean = nn.Sequential(
             nn.Linear(prev_dim, action_dim),
             nn.Tanh()  # Limit action range
@@ -106,7 +109,7 @@ class ActorNetwork(nn.Module):
             action = mean
             log_prob = None
         else:
-            dist = torch.distributions.Normal(mean, std)
+            dist = torch.distributions.Normal(mean, std)  # 连续动作的常见设计
             action = dist.sample()
             log_prob = dist.log_prob(action).sum(dim=-1, keepdim=True)
         
@@ -139,9 +142,10 @@ class ActorNetwork(nn.Module):
 
 class CriticNetwork(nn.Module):
     """
-    Critic Network (Value Network) with Dueling Architecture
+    Critic Network (Value Network) with Dueling Architecture.
     
-    Outputs state value: V(s)
+    Dueling 结构常见于值函数，用“共享干路 + Value stream”来获得一个标量 V(s)。
+    在连续动作环境中，这样的冗余层可以提升估计平稳度。
     """
     
     def __init__(

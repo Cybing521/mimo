@@ -1,8 +1,8 @@
 """
-PPO Agent Implementation
-=========================
+PPO 智能体实现
+==============
 
-Proximal Policy Optimization agent for MA-MIMO optimization.
+用于 MA-MIMO 优化任务的 Proximal Policy Optimization (PPO) 智能体。
 """
 
 import torch
@@ -17,9 +17,12 @@ from .networks import ActorNetwork, CriticNetwork
 
 class PPOAgent:
     """
-    Proximal Policy Optimization Agent
-    
-    Implements PPO-Clip algorithm with GAE for advantage estimation.
+    Proximal Policy Optimization Agent.
+
+    对强化学习新手的速览：
+    - Actor 负责输出动作分布；Critic 负责估计当前状态的“好坏”。
+    - 训练时我们使用 PPO-Clip（限制策略变化的比率）+ GAE（更平滑的优势估计），
+      以避免策略每次更新跨步过大导致崩溃。
     """
     
     def __init__(
@@ -42,23 +45,23 @@ class PPOAgent:
         Initialize PPO Agent
         
         Args:
-            state_dim: State space dimension
-            action_dim: Action space dimension
-            lr_actor: Learning rate for actor
-            lr_critic: Learning rate for critic
-            gamma: Discount factor
-            gae_lambda: GAE lambda parameter
-            clip_epsilon: PPO clipping parameter
-            ppo_epochs: Number of PPO update epochs
-            batch_size: Mini-batch size
-            entropy_coef: Entropy regularization coefficient
-            value_loss_coef: Value loss coefficient
-            max_grad_norm: Maximum gradient norm for clipping
-            device: Device for computation ('cpu' or 'cuda')
+            state_dim: 状态向量长度（来自环境的观测维度）。
+            action_dim: 动作向量长度（环境动作空间的维度）。
+            lr_actor: Actor 学习率，控制策略网络每次更新幅度。
+            lr_critic: Critic 学习率，控制价值网络更新幅度。
+            gamma: 折扣因子 γ，决定未来奖励的重要性（越接近 1 越看重远期）。
+            gae_lambda: GAE 的 λ，调节优势估计平滑度（0.95 常用）。
+            clip_epsilon: PPO clip 的 ε，限制新旧策略概率比，防止更新过猛。
+            ppo_epochs: 每收集一批轨迹后，重复优化 PPO 损失的轮数。
+            batch_size: 每次梯度更新所用的小批量样本数。
+            entropy_coef: 熵正则系数，值越大越鼓励探索（策略分布更发散）。
+            value_loss_coef: Value Loss 权重，用于平衡 critic 相对 actor 的梯度。
+            max_grad_norm: 最大梯度范数，超过则裁剪以避免梯度爆炸。
+            device: 计算设备（'cpu' 或 'cuda'），传给 torch.device。
         """
         self.device = torch.device(device)
         
-        # Networks
+        # Networks（Actor 学策略，Critic 学状态价值）
         self.actor = ActorNetwork(state_dim, action_dim).to(self.device)
         self.critic = CriticNetwork(state_dim).to(self.device)
         
@@ -66,7 +69,7 @@ class PPOAgent:
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr_critic)
         
-        # Hyperparameters
+        # Hyperparameters（PPO/GAE 的核心控制项）
         self.gamma = gamma
         self.gae_lambda = gae_lambda
         self.clip_epsilon = clip_epsilon
@@ -76,7 +79,7 @@ class PPOAgent:
         self.value_loss_coef = value_loss_coef
         self.max_grad_norm = max_grad_norm
         
-        # Replay buffer
+        # Replay buffer（用 list 暂存一个 rollout，更新后立即清空）
         self.states = []
         self.actions = []
         self.rewards = []
@@ -84,7 +87,7 @@ class PPOAgent:
         self.log_probs = []
         self.dones = []
         
-        # Statistics
+        # Statistics（滑动窗口，方便日志记录）
         self.training_stats = {
             'actor_loss': deque(maxlen=100),
             'critic_loss': deque(maxlen=100),
@@ -99,16 +102,16 @@ class PPOAgent:
         deterministic: bool = False
     ) -> Tuple[np.ndarray, float, float]:
         """
-        Select action from policy
+        从当前策略中采样动作。
         
         Args:
-            state: Current state
-            deterministic: If True, use deterministic policy
+            state: 环境给出的状态观测。
+            deterministic: True 时使用均值动作（评估），False 时随机采样（训练）。
         
         Returns:
-            action: Selected action
-            log_prob: Log probability of action
-            value: State value
+            action: 要施加到环境的动作向量（np.ndarray）。
+            log_prob: 该动作在旧策略下的对数概率（用于 PPO 比值）。
+            value: Critic 估计的状态价值。
         """
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         
@@ -132,15 +135,7 @@ class PPOAgent:
         done: bool,
     ):
         """
-        Store transition in replay buffer
-        
-        Args:
-            state: Current state
-            action: Selected action
-            reward: Received reward
-            value: State value
-            log_prob: Log probability of action
-            done: Whether episode is done
+        将一次交互 (s, a, r, V, logπ, done) 写入缓冲区，供更新阶段统一处理。
         """
         self.states.append(state)
         self.actions.append(action)
@@ -154,14 +149,14 @@ class PPOAgent:
         next_value: float
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Compute Generalized Advantage Estimation
+        计算广义优势估计（GAE）。
         
         Args:
-            next_value: Value of the next state
+            next_value: 轨迹终点下一状态的价值，用于 bootstrapping。
         
         Returns:
-            advantages: Advantage estimates
-            returns: Return estimates (for value function training)
+            advantages: 每个时间步的优势估计 A_t。
+            returns: 对应的回报（用于训练 Critic）。
         """
         rewards = np.array(self.rewards)
         values = np.array(self.values + [next_value])
@@ -187,25 +182,25 @@ class PPOAgent:
     
     def update(self, next_state: np.ndarray) -> Dict[str, float]:
         """
-        Update policy using PPO
+        使用 PPO-Clip 对策略与价值网络进行一次批量更新。
         
         Args:
-            next_state: Next state (for bootstrapping)
+            next_state: rollout 结束时的状态，用于计算 bootstrapping 价值。
         
         Returns:
-            Training statistics
+            记录本次更新中 actor/critic loss、熵等统计量的字典。
         """
         if len(self.states) == 0:
             return {}
         
-        # Compute advantages and returns
+        # Compute advantages and returns（next_state 用来做 bootstrapping）
         next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
         with torch.no_grad():
             next_value = self.critic(next_state_tensor).cpu().item()
         
         advantages, returns = self.compute_gae(next_value)
         
-        # Normalize advantages
+        # Normalize advantages（标准化后更易训练）
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         
         # Convert to tensors
@@ -240,7 +235,7 @@ class PPOAgent:
                 batch_advantages = advantages_tensor[batch_indices]
                 batch_returns = returns_tensor[batch_indices]
                 
-                # Evaluate actions
+                # Evaluate actions（新策略给出 log prob 和熵）
                 new_log_probs, entropy = self.actor.evaluate_actions(
                     batch_states, batch_actions
                 )
@@ -260,7 +255,7 @@ class PPOAgent:
                 # Value loss
                 value_loss = nn.MSELoss()(values, batch_returns.unsqueeze(1))
                 
-                # Entropy loss
+                # Entropy loss（鼓励探索，熵高=更平）
                 entropy_loss = -entropy.mean()
                 
                 # Total loss
@@ -300,7 +295,7 @@ class PPOAgent:
         return stats
     
     def clear_buffer(self):
-        """Clear replay buffer"""
+        """清空当前 rollout 数据。"""
         self.states = []
         self.actions = []
         self.rewards = []
@@ -310,10 +305,10 @@ class PPOAgent:
     
     def save(self, filepath: str):
         """
-        Save agent
+        保存智能体参数。
         
         Args:
-            filepath: Path to save checkpoint
+            filepath: checkpoint 写入路径。
         """
         checkpoint = {
             'actor_state_dict': self.actor.state_dict(),
@@ -326,10 +321,10 @@ class PPOAgent:
     
     def load(self, filepath: str):
         """
-        Load agent
+        加载已保存的智能体。
         
         Args:
-            filepath: Path to checkpoint
+            filepath: checkpoint 文件路径。
         """
         checkpoint = torch.load(filepath, map_location=self.device)
         self.actor.load_state_dict(checkpoint['actor_state_dict'])
@@ -340,10 +335,7 @@ class PPOAgent:
     
     def get_training_stats(self) -> Dict[str, float]:
         """
-        Get recent training statistics
-        
-        Returns:
-            Dictionary of statistics
+        返回近期训练指标（滑动平均），便于日志或可视化。
         """
         stats = {}
         for key, values in self.training_stats.items():

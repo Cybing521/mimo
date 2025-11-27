@@ -51,6 +51,10 @@ python tools/check_cuda.py
 pytest tests/unit
 ```
 
+> 依赖列表已包含 `pypdf`（用于 `utils/extract_pdf.py` 的论文解析工具）以及修正后的 `pytest` 版本号，请确保重新执行 `pip install -r requirements.txt` 以同步最新环境。
+>
+> ⚠️ 2025-11 起，OpenAI Gym 已停止维护，本项目已切换到 **Gymnasium**。若你之前安装过 `gym`，请先 `pip uninstall gym` 再重新安装依赖，避免二者冲突。
+
 ### 2. 运行仿真 (Ma 2023)
 
 使用通用脚本 `universal_simulation.py` 复现 Ma 2023 论文的所有图表：
@@ -178,10 +182,9 @@ IEEE Transactions on Wireless Communications, 16(8), 5147-5161.
 
 #### **快速开始**
 
-**1. 训练DRL Agent**
+**1. 正式训练（论文级，推荐 GPU）**
 
 ```bash
-# 推荐配置（Ma Fig.6 对应环境，默认使用 GPU 如可用）
 python experiments/train_drl.py \
     --num_episodes 5000 \
     --N 4 --M 4 \
@@ -197,14 +200,53 @@ python experiments/train_drl.py \
     --ppo_epochs 10 \
     --batch_size 64 \
     --entropy_coef 0.01 \
+    --min_entropy_coef 0.001 \
+    --rollout_episodes 4 \
+    --lr_anneal \
+    --min_lr_factor 0.1 \
     --eval_interval 100 \
+    --eval_episodes 20 \
+    --eval_seed 2024 \
     --save_interval 500 \
     --seed 42 \
     --device cuda \
     --save_dir results/drl_training
 ```
 
-**2. 对比实验**
+**2. 快速调试（10 分钟体验）**
+
+```bash
+python experiments/train_drl.py \
+    --num_episodes 100 \
+    --N 4 --M 4 \
+    --Lt 5 --Lr 5 \
+    --SNR_dB 15 \
+    --A_lambda 3.0 \
+    --max_steps 50 \
+    --rollout_episodes 2 \
+    --log_interval 5 \
+    --eval_interval 20 \
+    --eval_episodes 10 \
+    --eval_seed 2024 \
+    --save_dir results/drl_training_quick
+```
+
+> 正式训练输出写入 `results/drl_training/run_时间戳/`，用于对比实验与论文图；快速训练写入 `results/drl_training_quick/`，仅用于流程调试，性能不可用于论文。
+
+**参数说明（训练脚本常用项）**
+
+- `--num_episodes`：训练 episode 总数；5000 对应 Fig.5/6 水平，100 仅用于调试。
+- `--N/--M/--Lt/--Lr/--SNR_dB/--A_lambda/--max_steps`：与 Ma 2023 的系统配置保持一致，确保可比性。
+- `--lr_actor/--lr_critic/--gamma/--gae_lambda/--clip_epsilon/--ppo_epochs/--batch_size`：PPO 核心超参，可按需求微调。
+- `--entropy_coef` 与 `--min_entropy_coef`：控制策略探索强度，并在线性衰减到下限。
+- `--rollout_episodes`：每次 PPO 更新前要收集的 episode 数，>1 可降低梯度方差。
+- `--lr_anneal` 与 `--min_lr_factor`：启用后会线性衰减 Actor/Critic 学习率至设定下限。
+- `--eval_interval/--eval_episodes/--eval_seed`：评估频率、每次评估的 episode 数以及随机种子；固定种子有利于曲线可复现。
+- `--save_interval/--save_dir`：Checkpoint 周期与输出目录；正式/快速 run 使用不同目录以免混淆。
+- `--device`：`cuda` 或 `cpu`，GPU 强烈推荐。
+- `--seed`：全局随机种子，保证可复现。
+
+**3. 对比实验**
 
 ```bash
 # 对比容量 vs 区域大小 (复现Ma Fig.5 + DRL)
@@ -261,7 +303,7 @@ MIMO/
 - **状态空间**: 信道特征值 + Tx/Rx 位置 + 历史容量（N=M=4 时共 44 维，随阵元数线性扩展）
 - **动作空间**: 归一化连续向量（长度 2(N+M)），分别控制 Tx/Rx 的 Δx/Δy，环境内部缩放为 ±0.1λ
 - **奖励函数**: 以容量提升为核心，叠加约束惩罚、效率奖励与平滑项
-- **算法**: PPO-Clip with GAE
+- **算法**: PPO-Clip with GAE（支持多 episode 累积更新、LR/熵系数线性衰减、固定种子评估）
 - **网络**: Actor-Critic with Dueling architecture
 
 > 2025-11 更新：DRL 环境会在每个 episode 重采样 Rician 信道、联合优化 Tx/Rx 阵列，并采用标准 water-filling 进行功率分配，训练更贴近 Ma et al. 的仿真设置。
