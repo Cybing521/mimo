@@ -209,7 +209,7 @@ python experiments/train_drl.py \
     --eval_seed 2024 \
     --save_interval 500 \
     --seed 42 \
-    --device cuda \
+    --device auto \
     --save_dir results/drl_training
 ```
 
@@ -233,6 +233,39 @@ python experiments/train_drl.py \
 
 > 正式训练输出写入 `results/drl_training/run_时间戳/`，用于对比实验与论文图；快速训练写入 `results/drl_training_quick/`，仅用于流程调试，性能不可用于论文。
 
+### 🛰️ 在线可视化（WandB 集成）
+
+现在 `train_drl.py`、`universal_simulation.py` 与 `experiments/compare_methods.py` 均支持 **WandB（Weights & Biases）** 实时记录。使用流程：
+
+1. 在项目根目录创建 `.env` 文件并写入 `WANDB_API_KEY`（每次运行会自动读取，无需手动 `export`）：  
+   ```bash
+   cat <<'EOF' > .env
+   WANDB_API_KEY=YOUR_WANDB_KEY
+   EOF
+   chmod 600 .env
+   ```
+2. 在命令后追加 `--use_wandb` 以及其他可选参数：
+   - `--wandb_project mimo-lab`：Project 名（默认 `ma-mimo`）
+   - `--wandb_entity your-team`：团队/账号
+   - `--wandb_run_name 自定义名称`
+   - `--wandb_tags tag1 tag2`：标签数组
+
+示例：
+```bash
+# DRL 训练可视化
+python experiments/train_drl.py ... \
+    --use_wandb --wandb_project mimo-lab --wandb_tags drl high_snr
+
+# AO 扫描（Ma Fig.6）可视化
+python universal_simulation.py ... \
+    --use_wandb --wandb_project mimo-lab --wandb_tags ao fig6
+
+# DRL vs AO 对比实验
+python experiments/compare_methods.py ... \
+    --use_wandb --wandb_project mimo-lab --wandb_tags comparison fig7
+```
+开启后，训练曲线、关键指标与生成的 PNG 图都会自动同步到 WandB 仪表盘，便于线上查看。
+
 **参数说明（训练脚本常用项）**
 
 - `--num_episodes`：训练 episode 总数；5000 对应 Fig.5/6 水平，100 仅用于调试。
@@ -243,7 +276,13 @@ python experiments/train_drl.py \
 - `--lr_anneal` 与 `--min_lr_factor`：启用后会线性衰减 Actor/Critic 学习率至设定下限。
 - `--eval_interval/--eval_episodes/--eval_seed`：评估频率、每次评估的 episode 数以及随机种子；固定种子有利于曲线可复现。
 - `--save_interval/--save_dir`：Checkpoint 周期与输出目录；正式/快速 run 使用不同目录以免混淆。
-- `--device`：`cuda` 或 `cpu`，GPU 强烈推荐。
+- `--device`：设备选择，可选值：
+  - `auto`（默认）：自动选择最佳可用设备（优先 CUDA > MPS > CPU）
+  - `cuda`：NVIDIA GPU（仅 Linux/Windows，macOS 不支持）
+  - `mps`：Apple Silicon GPU（仅 macOS）
+  - `cpu`：CPU（所有平台）
+  
+  **注意**：macOS 不支持 CUDA，如果指定 `--device cuda` 会自动回退到 CPU。
 - `--seed`：全局随机种子，保证可复现。
 
 **3. 对比实验**

@@ -28,6 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.mimo_core import MIMOSystem
 from drl.env import MAMIMOEnv
 from drl.agent import PPOAgent
+from utils.wandb_utils import init_wandb, log_image, log_line_series, log_metrics, ensure_wandb_api_key
 
 
 def parse_args():
@@ -62,6 +63,15 @@ def parse_args():
     
     # Device
     parser.add_argument('--device', type=str, default='cpu')
+    
+    # WandB logging
+    parser.add_argument('--use_wandb', action='store_true', help='Enable Weights & Biases logging')
+    parser.add_argument('--wandb_project', type=str, default='ma-mimo', help='WandB project name')
+    parser.add_argument('--wandb_entity', type=str, default=None, help='WandB entity/team name')
+    parser.add_argument('--wandb_run_name', type=str, default=None, help='Custom WandB run name')
+    parser.add_argument('--wandb_mode', type=str, default='online',
+                        choices=['online', 'offline', 'disabled'], help='WandB run mode')
+    parser.add_argument('--wandb_tags', nargs='*', default=None, help='Optional WandB tags')
     
     return parser.parse_args()
 
@@ -306,7 +316,7 @@ class MethodComparator:
         return results
 
 
-def experiment_region_size(args, comparator):
+def experiment_region_size(args, comparator, wandb_run=None):
     """
     Experiment 1: Capacity vs Region Size
     Reproduces Ma et al. Fig. 5/6
@@ -346,8 +356,21 @@ def experiment_region_size(args, comparator):
         
         # Average over trials
         for method in args.methods:
-            results[method].append(np.mean(trial_results[method]))
-            times[method].append(np.mean(trial_times[method]))
+            mean_capacity = np.mean(trial_results[method]) if trial_results[method] else 0.0
+            mean_time = np.mean(trial_times[method]) if trial_times[method] else 0.0
+            results[method].append(mean_capacity)
+            times[method].append(mean_time)
+            
+            log_metrics(
+                wandb_run,
+                {
+                    'experiment': 'region_size',
+                    'mode': method,
+                    'A_lambda': float(A),
+                    'capacity_bps_hz': float(mean_capacity),
+                    'time_seconds': float(mean_time),
+                },
+            )
     
     # Plot results
     plt.figure(figsize=(12, 5))
@@ -373,10 +396,28 @@ def experiment_region_size(args, comparator):
     
     plt.tight_layout()
     
+    if wandb_run is not None:
+        log_line_series(
+            wandb_run,
+            A_range.tolist(),
+            {method: results[method] for method in args.methods},
+            title='Capacity vs Region Size',
+            x_name='A_lambda',
+            key='plots/region_capacity',
+        )
+        log_line_series(
+            wandb_run,
+            A_range.tolist(),
+            {method: times[method] for method in args.methods},
+            title='Runtime vs Region Size',
+            x_name='A_lambda',
+            key='plots/region_runtime',
+        )
+    
     return {'A_range': A_range.tolist(), 'results': results, 'times': times}
 
 
-def experiment_snr(args, comparator):
+def experiment_snr(args, comparator, wandb_run=None):
     """
     Experiment 2: Capacity vs SNR
     Reproduces Ma et al. Fig. 7
@@ -411,7 +452,17 @@ def experiment_snr(args, comparator):
                     trial_results[method].append(comparison[method]['capacity'])
         
         for method in args.methods:
-            results[method].append(np.mean(trial_results[method]))
+            mean_capacity = np.mean(trial_results[method]) if trial_results[method] else 0.0
+            results[method].append(mean_capacity)
+            log_metrics(
+                wandb_run,
+                {
+                    'experiment': 'snr',
+                    'mode': method,
+                    'snr_db': float(SNR_dB),
+                    'capacity_bps_hz': float(mean_capacity),
+                },
+            )
     
     # Plot
     plt.figure(figsize=(10, 6))
@@ -423,6 +474,16 @@ def experiment_snr(args, comparator):
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+    
+    if wandb_run is not None:
+        log_line_series(
+            wandb_run,
+            SNR_range.tolist(),
+            {method: results[method] for method in args.methods},
+            title='Capacity vs SNR',
+            x_name='snr_db',
+            key='plots/snr_capacity',
+        )
     
     return {'SNR_range': SNR_range.tolist(), 'results': results}
 
@@ -436,6 +497,26 @@ def main(args):
     exp_dir = os.path.join(args.save_dir, f'{args.experiment}_{timestamp}')
     os.makedirs(exp_dir, exist_ok=True)
     
+    ensure_wandb_api_key()
+    wandb_run = init_wandb(
+        enabled=args.use_wandb,
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        run_name=args.wandb_run_name or f"{args.experiment}_{timestamp}",
+        mode=args.wandb_mode,
+        config={
+            'experiment': args.experiment,
+            'methods': args.methods,
+            'N': args.N,
+            'M': args.M,
+            'Lt': args.Lt,
+            'Lr': args.Lr,
+            'trials': args.trials,
+        },
+        tags=args.wandb_tags,
+        run_dir=exp_dir,
+    )
+    
     # Create comparator
     comparator = MethodComparator(
         drl_model_path=args.drl_model,
@@ -444,9 +525,9 @@ def main(args):
     
     # Run experiment
     if args.experiment == 'region_size':
-        data = experiment_region_size(args, comparator)
+        data = experiment_region_size(args, comparator, wandb_run=wandb_run)
     elif args.experiment == 'snr':
-        data = experiment_snr(args, comparator)
+        data = experiment_snr(args, comparator, wandb_run=wandb_run)
     else:
         raise ValueError(f"Unknown experiment: {args.experiment}")
     
@@ -471,6 +552,20 @@ def main(args):
             print(f"{method:15s}: {mean_capacity:.2f} bps/Hz")
     
     plt.show()
+    
+    if wandb_run is not None:
+        log_image(
+            wandb_run,
+            key='plots/comparison',
+            image_path=fig_path,
+            caption=f'{args.experiment} comparison',
+        )
+        summary_metrics = {
+            f'{method}/mean_capacity': float(np.mean(data['results'][method]))
+            for method in args.methods if method in data['results']
+        }
+        log_metrics(wandb_run, summary_metrics)
+        wandb_run.finish()
 
 
 if __name__ == "__main__":

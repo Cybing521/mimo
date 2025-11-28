@@ -21,6 +21,51 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from drl.env import MAMIMOEnv
 from drl.agent import PPOAgent
+from utils.wandb_utils import (
+    init_wandb,
+    log_image,
+    log_line_series,
+    log_metrics,
+    ensure_wandb_api_key,
+)
+
+
+def get_device(device_preference: str = 'cpu') -> str:
+    """
+    智能设备选择：根据用户偏好和系统可用性自动选择最佳设备。
+    
+    Args:
+        device_preference: 用户偏好的设备 ('cpu', 'cuda', 'mps', 'auto')
+    
+    Returns:
+        实际可用的设备字符串
+    """
+    if device_preference == 'auto':
+        # 自动选择：优先 CUDA > MPS > CPU
+        if torch.cuda.is_available():
+            return 'cuda'
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return 'mps'
+        else:
+            return 'cpu'
+    
+    elif device_preference == 'cuda':
+        if torch.cuda.is_available():
+            return 'cuda'
+        else:
+            print("⚠️  警告: CUDA 不可用，回退到 CPU")
+            print("   提示: macOS 不支持 CUDA，请使用 'cpu' 或 'mps'（Apple Silicon）")
+            return 'cpu'
+    
+    elif device_preference == 'mps':
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return 'mps'
+        else:
+            print("⚠️  警告: MPS 不可用，回退到 CPU")
+            return 'cpu'
+    
+    else:  # 'cpu' 或其他
+        return 'cpu'
 
 
 def parse_args():
@@ -68,8 +113,19 @@ def parse_args():
                         help='Seed used during evaluation to reduce variance')
     
     # Device
-    parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'], help='Device')
+    parser.add_argument('--device', type=str, default='auto', 
+                       choices=['cpu', 'cuda', 'mps', 'auto'], 
+                       help='Device (auto: 自动选择最佳可用设备)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    
+    # WandB logging
+    parser.add_argument('--use_wandb', action='store_true', help='Enable Weights & Biases logging')
+    parser.add_argument('--wandb_project', type=str, default='ma-mimo', help='WandB project name')
+    parser.add_argument('--wandb_entity', type=str, default=None, help='WandB entity (team) name')
+    parser.add_argument('--wandb_run_name', type=str, default=None, help='Custom WandB run name')
+    parser.add_argument('--wandb_mode', type=str, default='online',
+                        choices=['online', 'offline', 'disabled'], help='WandB run mode')
+    parser.add_argument('--wandb_tags', nargs='*', default=None, help='Optional WandB tags')
     
     return parser.parse_args()
 
@@ -150,6 +206,19 @@ def train(args):
         json.dump(vars(args), f, indent=4)
     print(f"Configuration saved to {config_path}")
     
+    # Initialize WandB（可选在线可视化）
+    ensure_wandb_api_key()
+    wandb_run = init_wandb(
+        enabled=args.use_wandb,
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        run_name=args.wandb_run_name or f"drl_train_{timestamp}",
+        mode=args.wandb_mode,
+        config=vars(args),
+        tags=args.wandb_tags,
+        run_dir=run_dir,
+    )
+    
     # Create environment（训练与评估共用同一个 env，保持配置一致）
     env = MAMIMOEnv(
         N=args.N,
@@ -170,6 +239,13 @@ def train(args):
     print(f"  N={args.N}, M={args.M}, Lt={args.Lt}, Lr={args.Lr}")
     print(f"  SNR={args.SNR_dB}dB, A={args.A_lambda}λ")
     
+    # 智能设备选择
+    actual_device = get_device(args.device)
+    if actual_device != args.device:
+        print(f"设备选择: {args.device} -> {actual_device}")
+    else:
+        print(f"使用设备: {actual_device}")
+    
     # Create agent（所有超参由命令行指定，便于做 ablation）
     agent = PPOAgent(
         state_dim=state_dim,
@@ -182,7 +258,7 @@ def train(args):
         ppo_epochs=args.ppo_epochs,
         batch_size=args.batch_size,
         entropy_coef=args.entropy_coef,
-        device=args.device,
+        device=actual_device,
     )
     
     print(f"\nAgent created:")
@@ -261,6 +337,16 @@ def train(args):
                 log_str += f"Critic Loss: {update_stats['critic_loss']:.4f}"
             
             progress_bar.set_description(log_str)
+            
+            log_payload = {
+                'train/episode': episode + 1,
+                'train/reward': mean_reward,
+                'train/capacity': mean_capacity,
+            }
+            if update_stats:
+                log_payload['loss/actor'] = update_stats['actor_loss']
+                log_payload['loss/critic'] = update_stats['critic_loss']
+            log_metrics(wandb_run, log_payload, step=episode + 1)
         
         # ===== 阶段 3：定期进行评估（deterministic policy），并保存最好模型 =====
         # Evaluation（deterministic 模式评估策略质量）
@@ -283,6 +369,18 @@ def train(args):
                 best_model_path = os.path.join(run_dir, 'best_model.pth')
                 agent.save(best_model_path)
                 print(f"✓ New best model saved! Capacity: {best_eval_capacity:.2f}")
+            
+            log_metrics(
+                wandb_run,
+                {
+                    'eval/episode': episode + 1,
+                    'eval/mean_capacity': eval_metrics['mean_capacity'],
+                    'eval/std_capacity': eval_metrics['std_capacity'],
+                    'eval/mean_reward': eval_metrics['mean_reward'],
+                    'eval/std_reward': eval_metrics['std_reward'],
+                },
+                step=episode + 1,
+            )
         
         # ===== 阶段 4：常规 checkpoint，防止训练中断导致结果丢失 =====
         # Save checkpoint（长时间训练时可恢复）
@@ -341,6 +439,47 @@ def train(args):
     print(f"Best evaluation capacity: {best_eval_capacity:.2f} bps/Hz")
     print(f"Results saved to: {run_dir}")
     print(f"{'='*60}")
+
+    # WandB logging（上传曲线与关键指标）
+    if wandb_run is not None:
+        wandb_run.summary['best_eval_capacity'] = best_eval_capacity
+        log_image(
+            wandb_run,
+            key='plots/training_curves',
+            image_path=fig_path,
+            caption='DRL training curves',
+            step=args.num_episodes,
+        )
+        episodes_axis = list(range(1, len(episode_rewards) + 1))
+        log_line_series(
+            wandb_run,
+            episodes_axis,
+            {
+                'reward': episode_rewards,
+                'capacity': episode_capacities,
+            },
+            title='Training reward & capacity',
+            x_name='episode',
+            key='plots/training_series',
+        )
+        if eval_capacities:
+            log_line_series(
+                wandb_run,
+                eval_episodes,
+                {'eval_capacity': eval_capacities},
+                title='Evaluation capacity',
+                x_name='episode',
+                key='plots/eval_series',
+            )
+        log_metrics(
+            wandb_run,
+            {
+                'final/best_eval_capacity': best_eval_capacity,
+                'final/run_dir': run_dir,
+            },
+            step=args.num_episodes,
+        )
+        wandb_run.finish()
     
     return agent, run_dir
 

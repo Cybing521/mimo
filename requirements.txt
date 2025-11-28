@@ -9,6 +9,7 @@ pypdf>=4.0.0
 torch>=2.0.0
 gymnasium>=0.29.1
 tensorboard>=2.13.0
+wandb>=0.16.0
 
 # test
 pytest>=4.15.0

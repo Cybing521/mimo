@@ -57,7 +57,7 @@ class PPOAgent:
             entropy_coef: 熵正则系数，值越大越鼓励探索（策略分布更发散）。
             value_loss_coef: Value Loss 权重，用于平衡 critic 相对 actor 的梯度。
             max_grad_norm: 最大梯度范数，超过则裁剪以避免梯度爆炸。
-            device: 计算设备（'cpu' 或 'cuda'），传给 torch.device。
+            device: 计算设备（'cpu', 'cuda' 或 'mps'），传给 torch.device。
         """
         self.device = torch.device(device)
         

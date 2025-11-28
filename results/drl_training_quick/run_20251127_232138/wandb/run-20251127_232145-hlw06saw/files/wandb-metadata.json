@@ -1,0 +1,70 @@
+{
+  "os": "macOS-15.3-arm64-arm-64bit",
+  "python": "CPython 3.11.6",
+  "startedAt": "2025-11-27T15:21:45.799190Z",
+  "args": [
+    "--num_episodes",
+    "100",
+    "--N",
+    "4",
+    "--M",
+    "4",
+    "--Lt",
+    "5",
+    "--Lr",
+    "5",
+    "--SNR_dB",
+    "15",
+    "--A_lambda",
+    "3.0",
+    "--max_steps",
+    "50",
+    "--rollout_episodes",
+    "2",
+    "--log_interval",
+    "5",
+    "--eval_interval",
+    "20",
+    "--eval_episodes",
+    "10",
+    "--eval_seed",
+    "2024",
+    "--save_dir",
+    "results/drl_training_quick",
+    "--use_wandb",
+    "--wandb_project",
+    "mimo"
+  ],
+  "program": "/Users/cyibin/Documents/研一/项目/MIMO/experiments/train_drl.py",
+  "codePath": "experiments/train_drl.py",
+  "codePathLocal": "experiments/train_drl.py",
+  "git": {
+    "remote": "git@github.com:Cybing521/mimo.git",
+    "commit": "902531da971796e3be5be6d29491493de88e313a"
+  },
+  "email": "1649192259@qq.com",
+  "root": "results/drl_training_quick/run_20251127_232138",
+  "host": "cyibindeMacBook-Air.local",
+  "executable": "/Users/cyibin/Documents/研一/项目/MIMO/venv/bin/python",
+  "cpu_count": 10,
+  "cpu_count_logical": 10,
+  "disk": {
+    "/": {
+      "total": "245107195904",
+      "used": "137573453824"
+    }
+  },
+  "memory": {
+    "total": "17179869184"
+  },
+  "apple": {
+    "name": "Apple M4",
+    "ecpuCores": 6,
+    "pcpuCores": 4,
+    "gpuCores": 8,
+    "memoryGb": 16,
+    "swapTotalBytes": "2147483648",
+    "ramTotalBytes": "17179869184"
+  },
+  "writerId": "8ejn7serodanagdxsj1b05o0e10e50i0"
+}

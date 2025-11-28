@@ -7,6 +7,7 @@ from datetime import datetime
 from multiprocessing import Pool
 from tqdm import tqdm
 from core.mimo_core import MIMOSystem
+from utils.wandb_utils import init_wandb, log_image, log_line_series, log_metrics, ensure_wandb_api_key
 
 def run_single_simulation(args):
     """
@@ -71,6 +72,15 @@ def main():
     parser.add_argument('--A', type=float, default=4.0, help='Region size in wavelengths (fixed if not sweeping)')
     parser.add_argument('--SNR', type=float, default=5.0, help='SNR in dB (fixed if not sweeping)')
     
+    # WandB logging
+    parser.add_argument('--use_wandb', action='store_true', help='Enable Weights & Biases logging')
+    parser.add_argument('--wandb_project', type=str, default='ma-mimo', help='WandB project name')
+    parser.add_argument('--wandb_entity', type=str, default=None, help='WandB entity/team name')
+    parser.add_argument('--wandb_run_name', type=str, default=None, help='Custom WandB run name')
+    parser.add_argument('--wandb_mode', type=str, default='online',
+                        choices=['online', 'offline', 'disabled'], help='WandB run mode')
+    parser.add_argument('--wandb_tags', nargs='*', default=None, help='Optional WandB tags')
+    
     args = parser.parse_args()
     
     # Construct Range
@@ -88,6 +98,25 @@ def main():
         'Lt': args.Lt, 'Lr': args.Lr,
         'A': args.A, 'SNR': args.SNR
     }
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    ensure_wandb_api_key()
+    wandb_run = init_wandb(
+        enabled=args.use_wandb,
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        run_name=args.wandb_run_name or f"universal_{args.sweep_param}_{timestamp}",
+        mode=args.wandb_mode,
+        config={
+            'base_params': base_params,
+            'sweep_param': args.sweep_param,
+            'range': variable_values.tolist(),
+            'modes': args.modes,
+            'trials': args.trials,
+            'cores': args.cores,
+        },
+        tags=args.wandb_tags,
+    )
     
     print(f"\n{'='*70}")
     print(f"Universal MIMO Simulation")
@@ -146,6 +175,14 @@ def main():
             y_means.append(avg_cap)
             
             print(f"  {args.sweep_param}={val:.2f} -> Rate: {avg_cap:.4f} bps/Hz")
+            log_metrics(
+                wandb_run,
+                {
+                    'mode': mode,
+                    args.sweep_param: float(val),
+                    'capacity_bps_hz': float(avg_cap),
+                },
+            )
             
         results_data[mode] = y_means
         
@@ -154,6 +191,17 @@ def main():
         plt.plot(variable_values, y_means, label=mode,
                  marker=style['marker'], color=style['color'],
                  linestyle='-', markerfacecolor='none', markeredgewidth=1.5)
+    
+    if wandb_run is not None:
+        series_dict = {mode: results_data[mode] for mode in args.modes if mode in results_data}
+        log_line_series(
+            wandb_run,
+            variable_values.tolist(),
+            series_dict,
+            title=f'Achievable Rate vs {args.sweep_param}',
+            x_name=args.sweep_param,
+            key='plots/universal_capacity',
+        )
 
     # Labeling
     if args.sweep_param == 'SNR':
@@ -175,7 +223,6 @@ def main():
     
     # Save Results
     if not os.path.exists('results'): os.makedirs('results')
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
     # Save Image
     img_filename = f'results/universal_sweep_{args.sweep_param}_{timestamp}.png'
@@ -187,6 +234,20 @@ def main():
         json.dump(results_data, f, indent=4)
         
     print(f"\nResults saved to:\n  {img_filename}\n  {json_filename}")
+    
+    if wandb_run is not None:
+        log_image(
+            wandb_run,
+            key='plots/universal_curve',
+            image_path=img_filename,
+            caption=f'Achievable rate vs {args.sweep_param}',
+        )
+        summary_metrics = {
+            f'{mode}/mean_capacity': float(np.mean(results_data[mode])) if results_data[mode] else 0.0
+            for mode in args.modes if mode in results_data
+        }
+        log_metrics(wandb_run, summary_metrics)
+        wandb_run.finish()
 
 if __name__ == "__main__":
     main()
