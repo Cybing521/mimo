@@ -233,6 +233,31 @@ python experiments/train_drl.py \
 
 > 正式训练输出写入 `results/drl_training/run_时间戳/`，用于对比实验与论文图；快速训练写入 `results/drl_training_quick/`，仅用于流程调试，性能不可用于论文。
 
+**3. 多起点训练 + 改进探索策略（推荐用于提升性能）**
+
+```bash
+# 训练3个模型，每个使用不同的随机种子，最后选择最好的
+python experiments/train_drl_multi_start.py \
+    --num_models 3 \
+    --select_best \
+    --num_episodes 5000 \
+    --N 4 --M 4 \
+    --Lt 5 --Lr 5 \
+    --SNR_dB 25.0 \
+    --A_lambda 3.0 \
+    --max_steps 50 \
+    --device auto \
+    --save_dir results/drl_training
+```
+
+**改进特性**：
+- ✅ **多起点训练**：训练多个模型，每个从不同的随机初始化开始
+- ✅ **自适应熵系数**：早期高探索（3倍熵），后期高利用（正常熵）
+- ✅ **动作噪声注入**：早期添加探索噪声，后期无噪声
+- ✅ **自动选择最佳模型**：训练完成后自动选择评估容量最高的模型
+
+**预期效果**：容量从23.22提升到25-26 bps/Hz，更接近AO的28.72。
+
 ### 🛰️ 在线可视化（WandB 集成）
 
 现在 `train_drl.py`、`universal_simulation.py` 与 `experiments/compare_methods.py` 均支持 **WandB（Weights & Biases）** 实时记录。使用流程：
@@ -287,6 +312,17 @@ python experiments/compare_methods.py ... \
 
 **3. 对比实验**
 
+**快速单点对比**（推荐用于快速验证）：
+```bash
+# 在相同A_lambda和SNR下对比AO和DRL
+python experiments/quick_compare.py \
+    --drl_model results/drl_training/run_20251129_185802/best_model.pth \
+    --SNR_dB 25.0 \
+    --A_lambda 3.0 \
+    --trials 20
+```
+
+**完整对比实验**（生成论文图表）：
 ```bash
 # 对比容量 vs 区域大小 (复现Ma Fig.5 + DRL)
 python experiments/compare_methods.py \
@@ -301,6 +337,8 @@ python experiments/compare_methods.py \
     --drl_model results/drl_training/run_XXXXXX/best_model.pth \
     --methods AO DRL Hybrid
 ```
+
+> 💡 **提示**：使用 `quick_compare.py` 可以快速验证DRL模型性能，无需运行完整的对比实验。详细问题排查请参考 `docs/drl_troubleshooting.md`。
 
 #### **项目结构（DRL扩展）**
 

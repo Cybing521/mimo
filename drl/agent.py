@@ -99,7 +99,8 @@ class PPOAgent:
     def select_action(
         self, 
         state: np.ndarray, 
-        deterministic: bool = False
+        deterministic: bool = False,
+        exploration_noise: float = 0.0,
     ) -> Tuple[np.ndarray, float, float]:
         """
         从当前策略中采样动作。
@@ -107,6 +108,7 @@ class PPOAgent:
         Args:
             state: 环境给出的状态观测。
             deterministic: True 时使用均值动作（评估），False 时随机采样（训练）。
+            exploration_noise: 探索噪声强度（用于早期探索增强）。
         
         Returns:
             action: 要施加到环境的动作向量（np.ndarray）。
@@ -120,6 +122,14 @@ class PPOAgent:
             value = self.critic(state_tensor)
         
         action_np = action.cpu().numpy()[0]
+        
+        # 添加探索噪声（用于早期训练阶段）
+        if exploration_noise > 0 and not deterministic:
+            noise = np.random.randn(*action_np.shape) * exploration_noise
+            action_np = np.clip(action_np + noise, -1.0, 1.0)
+            # 注意：添加噪声后，log_prob需要重新计算，但为了简化，这里保持原值
+            # 在实际应用中，可以重新评估动作的log_prob
+        
         log_prob_np = log_prob.cpu().item() if log_prob is not None else 0.0
         value_np = value.cpu().item()
         

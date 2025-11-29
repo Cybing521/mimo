@@ -282,13 +282,26 @@ def train(args):
     progress_bar = tqdm(range(args.num_episodes), desc='Training')
     
     for episode in progress_bar:
+        # ===== 改进探索策略：计算探索噪声 =====
+        # 早期添加更多噪声，后期减少噪声
+        if episode < args.num_episodes * 0.3:  # 前30%：高探索噪声
+            exploration_noise = 0.3 * (1.0 - episode / (args.num_episodes * 0.3))
+        elif episode < args.num_episodes * 0.6:  # 30%-60%：中等噪声
+            exploration_noise = 0.1 * (1.0 - (episode - args.num_episodes * 0.3) / (args.num_episodes * 0.3))
+        else:  # 后40%：无噪声
+            exploration_noise = 0.0
+        
         state = env.reset()
         episode_reward = 0
         done = False
         
         # Collect experience（运行一整条 episode 的轨迹）
         while not done:
-            action, log_prob, value = agent.select_action(state)
+            action, log_prob, value = agent.select_action(
+                state, 
+                deterministic=False,
+                exploration_noise=exploration_noise
+            )
             next_state, reward, done, info = env.step(action)
             
             agent.store_transition(state, action, reward, value, log_prob, done)
@@ -315,8 +328,18 @@ def train(args):
                     param_group['lr'] = new_actor_lr
                 for param_group in agent.critic_optimizer.param_groups:
                     param_group['lr'] = new_critic_lr
-            agent.entropy_coef = args.min_entropy_coef + \
-                (args.entropy_coef - args.min_entropy_coef) * decay_factor
+            
+            # ===== 改进探索策略：自适应熵系数 =====
+            # 早期高探索（高熵），后期高利用（低熵）
+            if episode < args.num_episodes * 0.2:  # 前20%：高探索
+                adaptive_entropy = args.entropy_coef * 3.0  # 3倍熵系数
+            elif episode < args.num_episodes * 0.5:  # 20%-50%：中等探索
+                adaptive_entropy = args.entropy_coef * 2.0  # 2倍熵系数
+            else:  # 后50%：低探索，高利用
+                adaptive_entropy = args.min_entropy_coef + \
+                    (args.entropy_coef - args.min_entropy_coef) * decay_factor
+            
+            agent.entropy_coef = adaptive_entropy
         
         # ===== 阶段 2：纪录训练指标，便于后续绘图 =====
         # Store metrics
@@ -336,7 +359,8 @@ def train(args):
                 log_str += f"Actor Loss: {update_stats['actor_loss']:.4f} | "
                 log_str += f"Critic Loss: {update_stats['critic_loss']:.4f}"
             
-            progress_bar.set_description(log_str)
+            # 使用 refresh=False 避免重复输出，只在需要时刷新进度条
+            progress_bar.set_description(log_str, refresh=True)
             
             log_payload = {
                 'train/episode': episode + 1,

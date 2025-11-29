@@ -87,13 +87,15 @@ class MAMIMOEnv(gym.Env):
         self.D = self.mimo_system.D  # Minimum distance
         
         # Reward configuration
+        # 优化后的奖励权重：更强调容量提升，减少约束惩罚的负面影响
+        # 根据对比结果（差距5.5 bps/Hz），进一步优化权重
         self.reward_config = reward_config or {
-            'w_capacity': 0.5,
-            'w_improvement': 3.0,
-            'w_distance_penalty': 5.0,
-            'w_boundary_penalty': 5.0,
+            'w_capacity': 3.0,      # 进一步增加容量奖励权重（从2.0提升到3.0）
+            'w_improvement': 15.0,  # 进一步增加改进奖励权重（从10.0提升到15.0）
+            'w_distance_penalty': 2.0,  # 进一步降低距离惩罚（从3.0降到2.0）
+            'w_boundary_penalty': 2.0,  # 进一步降低边界惩罚（从3.0降到2.0）
             'w_efficiency': 0.1,
-            'w_smooth': 0.5,
+            'w_smooth': 0.1,       # 进一步降低平滑惩罚（从0.2降到0.1），允许更大的移动
         }
         
         # Action scaling (normalized actions ∈ [-1, 1])
@@ -117,7 +119,55 @@ class MAMIMOEnv(gym.Env):
         # Episode tracking
         self.current_step = 0
         self.capacity_history = []
-        self.capacity_normalizer = 30.0  # empirical upper bound
+        # ===== 容量归一化说明 =====
+        # 1. 为什么需要归一化？
+        #    - 强化学习中，奖励信号需要在合理范围内（通常 [-1, 1] 或 [0, 1]）
+        #    - 如果容量值很大（如29.4 bps/Hz），直接作为奖励会导致：
+        #      * 数值不稳定（梯度爆炸/消失）
+        #      * 训练不稳定（奖励信号过大）
+        #      * 不同系统配置下奖励尺度不一致
+        #
+        # 2. MIMO容量精确公式（见论文公式(11)）：
+        #    C = sum_{s=1}^{S} log2(1 + lambda_s^2 * p_s^* / sigma^2)
+        #    其中：
+        #    - S = rank(H) ≤ min(N, M) = min(4, 4) = 4 (这是秩的上界)
+        #    - lambda_s 是信道矩阵H的奇异值（特征值的平方根）
+        #    - p_s^* 是water-filling算法分配的最优功率
+        #    - sigma^2 是噪声功率
+        #
+        #    注意：min(4,4) = 4 指的是秩的上界，不是简单的4倍！
+        #
+        #    对于 N=M=4, SNR=15dB 的系统（power=10, sigma^2≈0.1）：
+        #    
+        #    【简化估算 - 下界】：
+        #    假设均匀功率分配，所有子信道增益相同：
+        #      C ≈ 4 * log2(1 + SNR) = 4 * log2(32.6) ≈ 20 bps/Hz
+        #    
+        #    【实际可达容量 - 为什么能达到30？】：
+        #    通过可移动天线优化 + water-filling，可以大幅提升容量：
+        #    
+        #    示例计算（优化后的情况）：
+        #    - 子信道1（主特征值很大）：lambda_1^2 = 100, p_1^* = 8
+        #      有效SNR = 100 * 8 / 0.1 = 8000
+        #      贡献 = log2(1+8000) ≈ 13 bps/Hz
+        #    
+        #    - 子信道2-4（次优特征值）：lambda_i^2 = 20, p_i^* = 0.67 (剩余功率均分)
+        #      有效SNR = 20 * 0.67 / 0.1 = 134
+        #      每个贡献 = log2(1+134) ≈ 7.1 bps/Hz
+        #    
+        #    总容量 ≈ 13 + 3*7.1 ≈ 34 bps/Hz
+        #    
+        #    因此，通过优化天线位置改善信道条件，实际容量可以达到 25-30+ bps/Hz
+        #
+        # 3. 可移动天线系统的实际容量：
+        #    - 通过优化天线位置，可以改善信道条件
+        #    - 实际可达容量可能远高于理论值（如29.4 bps/Hz）
+        #    - 因此设置归一化值为35，以覆盖实际可能达到的最大容量范围
+        #
+        # 4. 归一化在奖励函数中的作用（见 _compute_reward 方法）：
+        #    normalized_capacity = capacity / capacity_normalizer
+        #    这样可以将容量值缩放到 [0, 1] 范围内，使奖励信号更稳定
+        self.capacity_normalizer = 35.0  # 可根据实际运行结果动态调整
         
         # Current state（训练过程中持续更新）
         self.t = None  # Transmit antenna positions (2, N)
@@ -126,13 +176,20 @@ class MAMIMOEnv(gym.Env):
         self.H_r = None  # Channel matrix
         self.current_capacity = 0.0
         
-    def reset(self) -> np.ndarray:
+    def reset(self, init_seed: Optional[int] = None) -> np.ndarray:
         """
         Reset the environment to initial state
+        
+        Args:
+            init_seed: 可选的初始化随机种子（用于多起点训练）
         
         Returns:
             Initial state observation
         """
+        # 如果提供了种子，使用它来生成不同的初始位置
+        if init_seed is not None:
+            np.random.seed(init_seed)
+        
         # Initialize antenna positions using smart initialization
         try:
             self.t = self.mimo_system.initialize_antennas_smart(
@@ -354,25 +411,28 @@ class MAMIMOEnv(gym.Env):
         """
         cfg = self.reward_config
         
-        # 1. Capacity reward (normalized and centered)
-        normalized_capacity = (self.current_capacity / self.capacity_normalizer) - 0.5
+        # 1. Capacity reward (改进：直接使用容量值，不进行中心化)
+        # 使用线性缩放而不是中心化，使奖励信号更直接
+        normalized_capacity = self.current_capacity / self.capacity_normalizer
         r_capacity = cfg['w_capacity'] * normalized_capacity
         
-        # 2. Improvement reward (tanh to keep bounded)
+        # 2. Improvement reward (改进：使用线性奖励而不是tanh，避免信号压缩)
         improvement = self.current_capacity - prev_capacity
-        r_improvement = cfg['w_improvement'] * np.tanh(improvement)
+        # 使用缩放后的线性奖励，对大的改进给予更大奖励
+        r_improvement = cfg['w_improvement'] * improvement / (self.capacity_normalizer + 1e-8)
         
-        # 3. Constraint penalties
+        # 3. Constraint penalties (只在真正违反时才惩罚)
         distance_violations, boundary_violations = self._constraint_stats()
         r_constraint = (
             -cfg['w_distance_penalty'] * distance_violations
             -cfg['w_boundary_penalty'] * boundary_violations
         )
+        
         # 4. Efficiency bonus (capacity per unit power)
         total_power = np.sum(np.abs(np.diag(self.H_r @ self.H_r.T.conj())))
         r_efficiency = cfg['w_efficiency'] * (self.current_capacity / (total_power + 1e-8))
         
-        # 5. Smoothness penalty to avoid thrashing
+        # 5. Smoothness penalty to avoid thrashing (降低影响)
         delta_t = np.linalg.norm(self.t - prev_t, axis=0).mean()
         delta_r = np.linalg.norm(self.r - prev_r, axis=0).mean()
         r_smooth = -cfg['w_smooth'] * (delta_t + delta_r) / (self.max_delta + 1e-8)

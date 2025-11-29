@@ -1,0 +1,179 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            057lqoe9br2twhjamyp6b80sh00qjlca:
+                apple:
+                    ecpuCores: 6
+                    gpuCores: 8
+                    memoryGb: 16
+                    name: Apple M4
+                    pcpuCores: 4
+                    ramTotalBytes: "17179869184"
+                    swapTotalBytes: "2147483648"
+                args:
+                    - --num_episodes
+                    - "5000"
+                    - --N
+                    - "4"
+                    - --M
+                    - "4"
+                    - --Lt
+                    - "5"
+                    - --Lr
+                    - "5"
+                    - --SNR_dB
+                    - "25"
+                    - --A_lambda
+                    - "3.0"
+                    - --max_steps
+                    - "50"
+                    - --lr_actor
+                    - "3e-4"
+                    - --lr_critic
+                    - "3e-4"
+                    - --gamma
+                    - "0.99"
+                    - --gae_lambda
+                    - "0.95"
+                    - --clip_epsilon
+                    - "0.2"
+                    - --ppo_epochs
+                    - "10"
+                    - --batch_size
+                    - "64"
+                    - --entropy_coef
+                    - "0.01"
+                    - --min_entropy_coef
+                    - "0.001"
+                    - --rollout_episodes
+                    - "4"
+                    - --lr_anneal
+                    - --min_lr_factor
+                    - "0.1"
+                    - --eval_interval
+                    - "100"
+                    - --eval_episodes
+                    - "20"
+                    - --eval_seed
+                    - "2024"
+                    - --save_interval
+                    - "500"
+                    - --seed
+                    - "42"
+                    - --device
+                    - auto
+                    - --save_dir
+                    - results/drl_training
+                    - --use_wandb
+                    - --wandb_project
+                    - mimo
+                codePath: experiments/train_drl.py
+                codePathLocal: experiments/train_drl.py
+                cpu_count: 10
+                cpu_count_logical: 10
+                disk:
+                    /:
+                        total: "245107195904"
+                        used: "135668408320"
+                email: 1649192259@qq.com
+                executable: /Users/cyibin/Documents/研一/项目/MIMO/venv/bin/python
+                git:
+                    commit: 8a13a28f9544e5069f279232b2229eb8257d2370
+                    remote: git@github.com:Cybing521/mimo.git
+                host: cyibindeMacBook-Air.local
+                memory:
+                    total: "17179869184"
+                os: macOS-15.3-arm64-arm-64bit
+                program: /Users/cyibin/Documents/研一/项目/MIMO/experiments/train_drl.py
+                python: CPython 3.11.6
+                root: results/drl_training/run_20251129_181845
+                startedAt: "2025-11-29T10:18:47.744386Z"
+                writerId: 057lqoe9br2twhjamyp6b80sh00qjlca
+        m: []
+        python_version: 3.11.6
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+                - 62
+            "4": 3.11.6
+            "5": 0.23.0
+            "10":
+                - 20
+            "12": 0.23.0
+            "13": darwin-arm64
+A_lambda:
+    value: 3
+Lr:
+    value: 5
+Lt:
+    value: 5
+M:
+    value: 4
+"N":
+    value: 4
+SNR_dB:
+    value: 25
+batch_size:
+    value: 64
+clip_epsilon:
+    value: 0.2
+device:
+    value: auto
+entropy_coef:
+    value: 0.01
+eval_episodes:
+    value: 20
+eval_interval:
+    value: 100
+eval_seed:
+    value: 2024
+gae_lambda:
+    value: 0.95
+gamma:
+    value: 0.99
+log_interval:
+    value: 10
+lr_actor:
+    value: 0.0003
+lr_anneal:
+    value: true
+lr_critic:
+    value: 0.0003
+max_steps:
+    value: 50
+min_entropy_coef:
+    value: 0.001
+min_lr_factor:
+    value: 0.1
+num_episodes:
+    value: 5000
+ppo_epochs:
+    value: 10
+rollout_episodes:
+    value: 4
+save_dir:
+    value: results/drl_training
+save_interval:
+    value: 500
+seed:
+    value: 42
+use_wandb:
+    value: true
+wandb_entity:
+    value: null
+wandb_mode:
+    value: online
+wandb_project:
+    value: mimo
+wandb_run_name:
+    value: null
+wandb_tags:
+    value: null
