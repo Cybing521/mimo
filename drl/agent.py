@@ -40,9 +40,12 @@ class PPOAgent:
         value_loss_coef: float = 0.5,
         max_grad_norm: float = 0.5,
         device: str = 'cpu',
+        use_attention: bool = True,
+        use_residual: bool = True,
+        dropout: float = 0.1,
     ):
         """
-        Initialize PPO Agent
+        Initialize PPO Agent with improved architecture (方案7)
         
         Args:
             state_dim: 状态向量长度（来自环境的观测维度）。
@@ -58,12 +61,24 @@ class PPOAgent:
             value_loss_coef: Value Loss 权重，用于平衡 critic 相对 actor 的梯度。
             max_grad_norm: 最大梯度范数，超过则裁剪以避免梯度爆炸。
             device: 计算设备（'cpu', 'cuda' 或 'mps'），传给 torch.device。
+            use_attention: 是否在Actor中使用自注意力机制（方案7.1）。
+            use_residual: 是否使用残差连接（方案7.2）。
+            dropout: Dropout率，用于正则化。
         """
         self.device = torch.device(device)
         
-        # Networks（Actor 学策略，Critic 学状态价值）
-        self.actor = ActorNetwork(state_dim, action_dim).to(self.device)
-        self.critic = CriticNetwork(state_dim).to(self.device)
+        # Networks（Actor 学策略，Critic 学状态价值）- 使用方案7改进架构
+        self.actor = ActorNetwork(
+            state_dim, action_dim,
+            use_attention=use_attention,
+            use_residual=use_residual,
+            dropout=dropout,
+        ).to(self.device)
+        self.critic = CriticNetwork(
+            state_dim,
+            use_residual=use_residual,
+            dropout=dropout,
+        ).to(self.device)
         
         # Optimizers
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr_actor)
@@ -245,11 +260,21 @@ class PPOAgent:
                 batch_advantages = advantages_tensor[batch_indices]
                 batch_returns = returns_tensor[batch_indices]
                 
+                # NaN检测：检查输入状态
+                if torch.isnan(batch_states).any() or torch.isinf(batch_states).any():
+                    print("⚠️  警告: 更新时batch_states包含NaN或Inf，跳过此batch")
+                    continue
+                
                 # Evaluate actions（新策略给出 log prob 和熵）
                 new_log_probs, entropy = self.actor.evaluate_actions(
                     batch_states, batch_actions
                 )
                 values = self.critic(batch_states)
+                
+                # NaN检测：检查输出
+                if torch.isnan(new_log_probs).any() or torch.isnan(entropy).any() or torch.isnan(values).any():
+                    print("⚠️  警告: 网络输出包含NaN，跳过此batch")
+                    continue
                 
                 # Ratio and surrogate loss
                 ratio = torch.exp(new_log_probs - batch_old_log_probs.unsqueeze(1))
@@ -275,17 +300,29 @@ class PPOAgent:
                     + self.entropy_coef * entropy_loss
                 )
                 
-                # Update actor
+                # Update actor（添加梯度检查）
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward(retain_graph=True)
-                nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
-                self.actor_optimizer.step()
                 
-                # Update critic
+                # 检查梯度是否包含NaN
+                actor_grad_norm = nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+                if torch.isnan(actor_grad_norm) or torch.isinf(actor_grad_norm) or actor_grad_norm > 100:
+                    print(f"⚠️  警告: Actor梯度异常 (norm={actor_grad_norm:.2f})，跳过更新")
+                    self.actor_optimizer.zero_grad()
+                else:
+                    self.actor_optimizer.step()
+                
+                # Update critic（添加梯度检查）
                 self.critic_optimizer.zero_grad()
                 value_loss.backward()
-                nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
-                self.critic_optimizer.step()
+                
+                # 检查梯度是否包含NaN
+                critic_grad_norm = nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
+                if torch.isnan(critic_grad_norm) or torch.isinf(critic_grad_norm) or critic_grad_norm > 100:
+                    print(f"⚠️  警告: Critic梯度异常 (norm={critic_grad_norm:.2f})，跳过更新")
+                    self.critic_optimizer.zero_grad()
+                else:
+                    self.critic_optimizer.step()
                 
                 # Update statistics
                 stats['actor_loss'] += actor_loss.item()

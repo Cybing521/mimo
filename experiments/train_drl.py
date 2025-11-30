@@ -68,9 +68,9 @@ def get_device(device_preference: str = 'cpu') -> str:
         return 'cpu'
 
 
-def parse_args():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Train DRL agent for MA-MIMO')
+def get_parser():
+    """Get argument parser (without parsing) - useful for parent parsers"""
+    parser = argparse.ArgumentParser(description='Train DRL agent for MA-MIMO', add_help=False)
     
     # ===== 环境/仿真规模相关超参 =====
     # Environment parameters
@@ -127,6 +127,13 @@ def parse_args():
                         choices=['online', 'offline', 'disabled'], help='WandB run mode')
     parser.add_argument('--wandb_tags', nargs='*', default=None, help='Optional WandB tags')
     
+    return parser
+
+
+def parse_args():
+    """Parse command line arguments"""
+    parser = get_parser()
+    parser.add_help = True  # Re-enable help for standalone usage
     return parser.parse_args()
 
 

@@ -29,6 +29,7 @@ spec.loader.exec_module(train_drl)
 
 train = train_drl.train
 parse_args = train_drl.parse_args
+get_parser = train_drl.get_parser
 evaluate_agent = train_drl.evaluate_agent
 set_seed = train_drl.set_seed
 
@@ -60,9 +61,13 @@ def train_single_model(
     model_seed = base_seed + model_id * 1000
     
     # 创建参数副本并修改种子
+    import copy
     args = argparse.Namespace(**vars(base_args))
     args.seed = model_seed
-    args.wandb_run_name = f"{base_args.wandb_run_name or 'drl_multi'}_model{model_id+1}"
+    if hasattr(base_args, 'wandb_run_name') and base_args.wandb_run_name:
+        args.wandb_run_name = f"{base_args.wandb_run_name}_model{model_id+1}"
+    else:
+        args.wandb_run_name = f"drl_multi_model{model_id+1}"
     
     # 训练模型
     agent, run_dir = train(args)
@@ -90,7 +95,7 @@ def main():
     """多起点训练主函数"""
     parser = argparse.ArgumentParser(
         description='Multi-start DRL training with improved exploration',
-        parents=[parse_args()],
+        parents=[get_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 多起点训练说明：
