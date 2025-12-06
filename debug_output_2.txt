@@ -1,0 +1,36 @@
+Training on cpu
+Epoch 0: Capacity = 13.5348 bps/Hz, Loss = -13.5209
+Epoch 10: Capacity = 14.0202 bps/Hz, Loss = -14.0153
+Epoch 20: Capacity = 15.3299 bps/Hz, Loss = -15.3299
+Epoch 30: Capacity = 16.0287 bps/Hz, Loss = -16.0177
+Epoch 40: Capacity = 15.7233 bps/Hz, Loss = -15.7173
+
+Evaluating against AO...
+CRASH DEBUG: k=0
+t_in: shape=torch.Size([50, 8]), req_grad=True, is_leaf=True
+loss: shape=torch.Size([]), req_grad=False, is_leaf=True
+t_in stats: min=0.011916160583496094, max=9.981383323669434, nan=False
+Traceback (most recent call last):
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/experiments/train_unfolding.py", line 268, in <module>
+    evaluate(model, args)
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/experiments/train_unfolding.py", line 180, in evaluate
+    final_t, final_r = model(init_t, init_r, channel_params_torch)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/drl/deep_unfolding.py", line 137, in forward
+    raise e
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/drl/deep_unfolding.py", line 131, in forward
+    grads = torch.autograd.grad(loss, [t_in, r_in], create_graph=True)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/venv/lib/python3.11/site-packages/torch/autograd/__init__.py", line 503, in grad
+    result = _engine_run_backward(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cyibin/Documents/first-year/programs/MIMO/venv/lib/python3.11/site-packages/torch/autograd/graph.py", line 841, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn

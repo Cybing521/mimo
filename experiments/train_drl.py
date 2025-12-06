@@ -127,6 +127,22 @@ def get_parser():
                         choices=['online', 'offline', 'disabled'], help='WandB run mode')
     parser.add_argument('--wandb_tags', nargs='*', default=None, help='Optional WandB tags')
     
+    # ===== 方案7：改进网络架构参数 =====
+    parser.add_argument('--use_attention', action='store_true', default=True,
+                        help='Use self-attention mechanism in Actor network (方案7.1)')
+    parser.add_argument('--use_residual', action='store_true', default=True,
+                        help='Use residual connections (方案7.2)')
+    parser.add_argument('--dropout', type=float, default=0.1,
+                        help='Dropout rate for regularization (default: 0.1)')
+    
+    # ===== 多起点训练参数（方案3） =====
+    parser.add_argument('--num_models', type=int, default=1,
+                        help='Number of models to train (default: 1, >1 for multi-start training)')
+    parser.add_argument('--select_best', action='store_true',
+                        help='Select and save best model after multi-start training')
+    parser.add_argument('--base_seed', type=int, default=42,
+                        help='Base random seed (each model uses base_seed + model_id * 1000)')
+    
     return parser
 
 
@@ -254,6 +270,7 @@ def train(args):
         print(f"使用设备: {actual_device}")
     
     # Create agent（所有超参由命令行指定，便于做 ablation）
+    # 使用方案7改进的网络架构（注意力机制 + 残差连接）
     agent = PPOAgent(
         state_dim=state_dim,
         action_dim=action_dim,
@@ -266,6 +283,9 @@ def train(args):
         batch_size=args.batch_size,
         entropy_coef=args.entropy_coef,
         device=actual_device,
+        use_attention=args.use_attention,
+        use_residual=args.use_residual,
+        dropout=args.dropout,
     )
     
     print(f"\nAgent created:")
@@ -515,7 +535,146 @@ def train(args):
     return agent, run_dir
 
 
+def train_single_model(model_id: int, base_args, base_seed: int = 42):
+    """
+    训练单个模型（用于多起点训练）
+    
+    Args:
+        model_id: 模型ID（0, 1, 2, ...）
+        base_args: 基础参数
+        base_seed: 基础随机种子
+    
+    Returns:
+        (agent, run_dir, eval_capacity)
+    """
+    import copy
+    
+    print(f"\n{'='*70}")
+    print(f"训练模型 {model_id + 1}/{base_args.num_models}")
+    print(f"{'='*70}")
+    
+    # 为每个模型使用不同的随机种子
+    model_seed = base_seed + model_id * 1000
+    
+    # 创建参数副本并修改种子
+    args = argparse.Namespace(**vars(base_args))
+    args.seed = model_seed
+    args.num_models = 1  # 单模型训练
+    if hasattr(base_args, 'wandb_run_name') and base_args.wandb_run_name:
+        args.wandb_run_name = f"{base_args.wandb_run_name}_model{model_id+1}"
+    else:
+        args.wandb_run_name = f"drl_multi_model{model_id+1}"
+    
+    # 训练模型
+    agent, run_dir = train(args)
+    
+    # 评估模型
+    env = MAMIMOEnv(
+        N=args.N, M=args.M, Lt=args.Lt, Lr=args.Lr,
+        SNR_dB=args.SNR_dB, A_lambda=args.A_lambda,
+        max_steps=args.max_steps,
+    )
+    
+    eval_metrics = evaluate_agent(
+        env, agent,
+        num_episodes=args.eval_episodes,
+        seed=args.eval_seed
+    )
+    
+    eval_capacity = eval_metrics['mean_capacity']
+    print(f"\n模型 {model_id + 1} 评估容量: {eval_capacity:.2f} ± {eval_metrics['std_capacity']:.2f}")
+    
+    return agent, run_dir, eval_capacity
+
+
 if __name__ == "__main__":
     args = parse_args()
-    agent, run_dir = train(args)
+    
+    # 多起点训练（方案3）
+    if args.num_models > 1:
+        print("\n" + "="*70)
+        print("多起点训练 + 改进探索策略 + 改进网络架构")
+        print("="*70)
+        print(f"\n配置:")
+        print(f"  模型数量: {args.num_models}")
+        print(f"  每个模型训练: {args.num_episodes} episodes")
+        print(f"  基础随机种子: {args.base_seed}")
+        print(f"  系统参数: N={args.N}, M={args.M}, Lt={args.Lt}, Lr={args.Lr}")
+        print(f"  SNR={args.SNR_dB}dB, A/λ={args.A_lambda}")
+        print(f"\n改进的探索策略（方案4）:")
+        print(f"  ✓ 自适应熵系数（早期高探索，后期高利用）")
+        print(f"  ✓ 动作噪声注入（早期高噪声，后期无噪声）")
+        print(f"  ✓ 多起点初始化（每个模型不同的随机种子）")
+        print(f"\n改进的网络架构（方案7）:")
+        print(f"  ✓ 自注意力机制: {args.use_attention}")
+        print(f"  ✓ 残差连接: {args.use_residual}")
+        print(f"  ✓ Dropout率: {args.dropout}")
+        
+        # 训练所有模型
+        models = []
+        eval_capacities = []
+        
+        for model_id in range(args.num_models):
+            agent, run_dir, eval_capacity = train_single_model(
+                model_id=model_id,
+                base_args=args,
+                base_seed=args.base_seed,
+            )
+            models.append({
+                'agent': agent,
+                'run_dir': run_dir,
+                'model_id': model_id,
+                'eval_capacity': eval_capacity,
+            })
+            eval_capacities.append(eval_capacity)
+        
+        # 选择最佳模型
+        if args.select_best:
+            best_idx = np.argmax(eval_capacities)
+            best_model = models[best_idx]
+            
+            print(f"\n{'='*70}")
+            print("模型选择结果")
+            print(f"{'='*70}")
+            print(f"\n所有模型的评估容量:")
+            for i, (model, capacity) in enumerate(zip(models, eval_capacities)):
+                marker = " ← 最佳" if i == best_idx else ""
+                print(f"  模型 {i+1}: {capacity:.2f} bps/Hz{marker}")
+            
+            print(f"\n✓ 选择模型 {best_idx + 1} 作为最佳模型")
+            print(f"  评估容量: {best_model['eval_capacity']:.2f} bps/Hz")
+            print(f"  模型路径: {best_model['run_dir']}")
+            
+            # 保存最佳模型信息
+            best_info_path = os.path.join(
+                os.path.dirname(best_model['run_dir']),
+                'best_model_info.json'
+            )
+            best_info = {
+                'best_model_id': best_idx + 1,
+                'best_eval_capacity': float(best_model['eval_capacity']),
+                'best_model_path': os.path.join(best_model['run_dir'], 'best_model.pth'),
+                'all_capacities': [float(c) for c in eval_capacities],
+                'training_config': vars(args),
+            }
+            
+            with open(best_info_path, 'w') as f:
+                json.dump(best_info, f, indent=4)
+            
+            print(f"\n最佳模型信息已保存到: {best_info_path}")
+            print(f"最佳模型路径: {os.path.join(best_model['run_dir'], 'best_model.pth')}")
+        
+        print(f"\n{'='*70}")
+        print("多起点训练完成！")
+        print(f"{'='*70}")
+        print(f"\n所有模型目录:")
+        for model in models:
+            print(f"  模型 {model['model_id']+1}: {model['run_dir']}")
+    else:
+        # 单模型训练
+        print("\n改进的网络架构（方案7）:")
+        print(f"  ✓ 自注意力机制: {args.use_attention}")
+        print(f"  ✓ 残差连接: {args.use_residual}")
+        print(f"  ✓ Dropout率: {args.dropout}")
+        train(args)
 

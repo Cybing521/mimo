@@ -234,11 +234,14 @@ class MIMOSystem:
         if res.success: return res.x, True
         return pos_i, False
 
-    def run_optimization(self, A_lambda, mode='Proposed'):
+    def run_optimization(self, A_lambda, mode='Proposed', init_t=None, init_r=None, channel_params=None):
         """
         运行单次优化试验
         :param A_lambda: 归一化区域大小
         :param mode: 'Proposed', 'RMA', 'TMA', 'FPA'
+        :param init_t: Optional initial transmit antenna positions (2, N)
+        :param init_r: Optional initial receive antenna positions (2, M)
+        :param channel_params: Optional dictionary containing fixed channel parameters
         :return: capacity
         """
         square_size = A_lambda * self.lambda_val
@@ -250,21 +253,36 @@ class MIMOSystem:
             t = self.initialize_antennas_fixed_ula(self.N)
         else:
             # MA 模式: 在区域内智能初始化
-            r = self.initialize_antennas_smart(self.M, square_size)
-            t = self.initialize_antennas_smart(self.N, square_size)
+            # Use provided initialization if available, otherwise use smart initialization
+            if init_r is not None:
+                r = init_r.copy()
+            else:
+                r = self.initialize_antennas_smart(self.M, square_size)
+                
+            if init_t is not None:
+                t = init_t.copy()
+            else:
+                t = self.initialize_antennas_smart(self.N, square_size)
         
         # 信道参数
-        theta_p = np.random.rand(self.Lt) * np.pi
-        phi_p = np.random.rand(self.Lt) * np.pi
-        theta_q = np.random.rand(self.Lr) * np.pi
-        phi_q = np.random.rand(self.Lr) * np.pi
-        
-        # Rician信道
-        Sigma = np.zeros((self.Lr, self.Lt), dtype=complex)
-        kappa = 1
-        Sigma[0, 0] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(kappa/(kappa+1)/2)
-        for i in range(1, min(self.Lr, self.Lt)):
-            Sigma[i, i] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(1/((kappa+1)*(self.Lr-1))/2)
+        if channel_params:
+            theta_p = channel_params['theta_p']
+            phi_p = channel_params['phi_p']
+            theta_q = channel_params['theta_q']
+            phi_q = channel_params['phi_q']
+            Sigma = channel_params['Sigma']
+        else:
+            theta_p = np.random.rand(self.Lt) * np.pi
+            phi_p = np.random.rand(self.Lt) * np.pi
+            theta_q = np.random.rand(self.Lr) * np.pi
+            phi_q = np.random.rand(self.Lr) * np.pi
+            
+            # Rician信道
+            Sigma = np.zeros((self.Lr, self.Lt), dtype=complex)
+            kappa = 1
+            Sigma[0, 0] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(kappa/(kappa+1)/2)
+            for i in range(1, min(self.Lr, self.Lt)):
+                Sigma[i, i] = (np.random.randn() + 1j*np.random.randn()) * np.sqrt(1/((kappa+1)*(self.Lr-1))/2)
             
         cap_prev = 0
         max_iter = 50 if mode != 'FPA' else 1
@@ -388,5 +406,7 @@ class MIMOSystem:
             'capacity': capacity,
             'strongest_eigen_power': strongest_eigen_power,
             'total_power': total_power,
-            'cond_number': cond_number
+            'cond_number': cond_number,
+            't': t,
+            'r': r
         }

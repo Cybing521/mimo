@@ -90,12 +90,12 @@ class MAMIMOEnv(gym.Env):
         # 优化后的奖励权重：更强调容量提升，减少约束惩罚的负面影响
         # 根据对比结果（差距5.5 bps/Hz），进一步优化权重
         self.reward_config = reward_config or {
-            'w_capacity': 3.0,      # 进一步增加容量奖励权重（从2.0提升到3.0）
-            'w_improvement': 15.0,  # 进一步增加改进奖励权重（从10.0提升到15.0）
-            'w_distance_penalty': 2.0,  # 进一步降低距离惩罚（从3.0降到2.0）
-            'w_boundary_penalty': 2.0,  # 进一步降低边界惩罚（从3.0降到2.0）
-            'w_efficiency': 0.1,
-            'w_smooth': 0.1,       # 进一步降低平滑惩罚（从0.2降到0.1），允许更大的移动
+            'w_capacity': 10.0,      # 大幅提升容量权重 (3.0 -> 10.0)
+            'w_improvement': 1.0,    # 降低改进权重 (15.0 -> 1.0)，减少噪声
+            'w_distance_penalty': 5.0,  # 软惩罚权重
+            'w_boundary_penalty': 5.0,  # 软惩罚权重
+            'w_efficiency': 0.0,     # 暂时移除效率奖励，专注容量
+            'w_smooth': 0.05,        # 降低平滑惩罚
         }
         
         # Action scaling (normalized actions ∈ [-1, 1])
@@ -244,6 +244,20 @@ class MAMIMOEnv(gym.Env):
         new_r = self.r + rx_action
         
         # Project to feasible region（软投影，避免动作“闯红灯”）
+        # 注意：为了计算软惩罚，我们先保留未投影的位置用于计算 violation，
+        # 但实际更新状态时还是需要投影回可行域，否则物理模型会出错。
+        # 这里我们采用一种折中方案：
+        # 1. 计算 violation (基于未投影位置)
+        # 2. 投影回可行域用于下一步状态
+        
+        # Calculate violations BEFORE projection
+        dist_viol_t, bound_viol_t = self._calculate_soft_violations(new_t)
+        dist_viol_r, bound_viol_r = self._calculate_soft_violations(new_r)
+        
+        total_dist_viol = dist_viol_t + dist_viol_r
+        total_bound_viol = bound_viol_t + bound_viol_r
+        
+        # Project for next state
         new_t = self._project_to_feasible_region(new_t, self.t, is_transmit=True)
         new_r = self._project_to_feasible_region(new_r, self.r, is_transmit=False)
         self.t = new_t
@@ -253,7 +267,7 @@ class MAMIMOEnv(gym.Env):
         self._update_channel()
         
         # Compute reward（包含奖励与惩罚的混合信号）
-        reward = self._compute_reward(prev_capacity, prev_t, prev_r)
+        reward = self._compute_reward(prev_capacity, prev_t, prev_r, total_dist_viol, total_bound_viol)
         
         # Update tracking
         self.current_step += 1
@@ -268,11 +282,35 @@ class MAMIMOEnv(gym.Env):
         info = {
             'capacity': self.current_capacity,
             'step': self.current_step,
-            'constraint_violations': self._count_violations(),
+            'constraint_violations': (total_dist_viol > 0) + (total_bound_viol > 0), # Boolean indicator
         }
         
         return self._get_state(), reward, done, info
     
+    def _calculate_soft_violations(self, positions: np.ndarray) -> Tuple[float, float]:
+        """
+        Calculate soft violation magnitudes.
+        Returns: (distance_violation_sum, boundary_violation_sum)
+        """
+        num_antennas = positions.shape[1]
+        
+        # 1. Boundary Violations
+        # violation = max(0, -x) + max(0, x - L)
+        lower_viol = np.maximum(0, -positions)
+        upper_viol = np.maximum(0, positions - self.square_size)
+        boundary_viol = np.sum(lower_viol + upper_viol)
+        
+        # 2. Distance Violations
+        # violation = max(0, D - dist)
+        dist_viol = 0.0
+        for i in range(num_antennas):
+            for j in range(i+1, num_antennas):
+                dist = np.linalg.norm(positions[:, i] - positions[:, j])
+                if dist < self.D:
+                    dist_viol += (self.D - dist)
+                    
+        return dist_viol, boundary_viol
+
     def _initialize_channel_params(self):
         """Sample per-episode channel parameters"""
         self._theta_p = np.random.rand(self.Lt) * np.pi
@@ -398,47 +436,55 @@ class MAMIMOEnv(gym.Env):
         ]).astype(np.float32)
         
         return state
-    
-    def _compute_reward(self, prev_capacity: float, prev_t: np.ndarray, prev_r: np.ndarray) -> float:
+        
+    def get_channel_params(self):
+        """Return current channel parameters"""
+        return {
+            'theta_p': self._theta_p,
+            'phi_p': self._phi_p,
+            'theta_q': self._theta_q,
+            'phi_q': self._phi_q,
+            'Sigma': self._Sigma
+        }
+
+    def _compute_reward(
+        self, 
+        prev_capacity: float, 
+        prev_t: np.ndarray, 
+        prev_r: np.ndarray,
+        dist_viol: float,
+        bound_viol: float
+    ) -> float:
         """
-        Compute reward signal
-        
-        Args:
-            prev_capacity: Capacity in previous step
-        
-        Returns:
-            Total reward
+        Compute reward signal with soft penalties
         """
         cfg = self.reward_config
         
-        # 1. Capacity reward (改进：直接使用容量值，不进行中心化)
-        # 使用线性缩放而不是中心化，使奖励信号更直接
+        # 1. Capacity reward (Main Driver)
         normalized_capacity = self.current_capacity / self.capacity_normalizer
         r_capacity = cfg['w_capacity'] * normalized_capacity
         
-        # 2. Improvement reward (改进：使用线性奖励而不是tanh，避免信号压缩)
+        # 2. Improvement reward (Secondary Driver)
         improvement = self.current_capacity - prev_capacity
-        # 使用缩放后的线性奖励，对大的改进给予更大奖励
         r_improvement = cfg['w_improvement'] * improvement / (self.capacity_normalizer + 1e-8)
         
-        # 3. Constraint penalties (只在真正违反时才惩罚)
-        distance_violations, boundary_violations = self._constraint_stats()
+        # 3. Soft Constraint Penalties
+        # Normalize violations by wavelength to keep scale consistent
+        norm_dist_viol = dist_viol / self.mimo_system.lambda_val
+        norm_bound_viol = bound_viol / self.mimo_system.lambda_val
+        
         r_constraint = (
-            -cfg['w_distance_penalty'] * distance_violations
-            -cfg['w_boundary_penalty'] * boundary_violations
+            -cfg['w_distance_penalty'] * norm_dist_viol
+            -cfg['w_boundary_penalty'] * norm_bound_viol
         )
         
-        # 4. Efficiency bonus (capacity per unit power)
-        total_power = np.sum(np.abs(np.diag(self.H_r @ self.H_r.T.conj())))
-        r_efficiency = cfg['w_efficiency'] * (self.current_capacity / (total_power + 1e-8))
-        
-        # 5. Smoothness penalty to avoid thrashing (降低影响)
+        # 4. Smoothness penalty
         delta_t = np.linalg.norm(self.t - prev_t, axis=0).mean()
         delta_r = np.linalg.norm(self.r - prev_r, axis=0).mean()
         r_smooth = -cfg['w_smooth'] * (delta_t + delta_r) / (self.max_delta + 1e-8)
         
         # Total reward
-        reward = r_capacity + r_improvement + r_constraint + r_efficiency + r_smooth
+        reward = r_capacity + r_improvement + r_constraint + r_smooth
         
         return float(reward)
     
